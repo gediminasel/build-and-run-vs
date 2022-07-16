@@ -1,0 +1,133 @@
+{
+	"name": "build-and-run",
+	"displayName": "Build and Run",
+	"description": "Build and Run your code with ease. Pass input from source comments.",
+	"version": "1.0.0",
+	"publisher": "glelesius",
+	"bugs": {
+		"url": "https://github.com/gediminasel/build-and-run-vs/issues",
+		"email": "dev@lelesius.eu"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/gediminasel/build-and-run-vs.git"
+	},
+	"license": "GNU GENERAL PUBLIC LICENSE Version 3. See license in LICENSE.txt",
+	"engines": {
+		"vscode": "^1.34.0"
+	},
+	"categories": [
+		"Testing",
+		"Other"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "build-and-run:build_run",
+				"title": "Build and Run with input"
+			},
+			{
+				"command": "build-and-run:build",
+				"title": "Build using B&R command"
+			},
+			{
+				"command": "build-and-run:build_debug",
+				"title": "Build and Debug with input"
+			},
+			{
+				"command": "build-and-run:kill",
+				"title": "Kill running B&R program"
+			},
+			{
+				"command": "build-and-run:format",
+				"title": "Format using B&R command"
+			},
+			{
+				"command": "build-and-run:cleanup_temp",
+				"title": "Cleanup B&R temp files"
+			}
+		],
+		"configuration": {
+			"title": "Build and Run",
+			"properties": {
+				"buildAndRun.outputFlushPeriod": {
+					"type": [
+						"number",
+						"null"
+					],
+					"description": "How long to wait between output flushes in ms. Too small values will trigger VSCode internal buffering.",
+					"default": 500,
+					"minimum": 100
+				},
+				"buildAndRun": {
+					"type": "object",
+					"description": "Build and Run configuration.",
+					"properties": {
+						"cpp": {
+							"type": "object",
+							"description": "Build and Run C++ configuration.",
+							"properties": {
+								"build": {
+									"type": "string",
+									"description": "C++ build command"
+								},
+								"run": {
+									"type": "string",
+									"description": "C++ run command"
+								},
+								"debug": {
+									"type": "string",
+									"description": "C++ debug run command"
+								},
+								"debugBuild": {
+									"type": "string",
+									"description": "C++ debug build command"
+								},
+								"format": {
+									"type": "string",
+									"description": "C++ format command"
+								},
+								"inputBegin": {
+									"type": "string",
+									"description": "C++ input comment begin symbols"
+								},
+								"inputEnd": {
+									"type": "string",
+									"description": "C++ input commend end symbols"
+								}
+							}
+						},
+						"python": {
+							"type": "object",
+							"description": "Build and Run Python configuration."
+						},
+						"latex": {
+							"type": "object",
+							"description": "Build and Run Latex configuration."
+						}
+					}
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"package": "vsce package",
+		"compile": "tsc -p ./",
+		"lint": "eslint . --ext .ts,.tsx",
+		"watch": "tsc -watch -p ./"
+	},
+	"devDependencies": {
+		"@types/node": "^18.0.5",
+		"@types/vscode": "^1.34.0",
+		"@typescript-eslint/eslint-plugin": "^5.30.6",
+		"@typescript-eslint/parser": "^5.30.6",
+		"eslint": "^8.19.0",
+		"typescript": "^4.7.4",
+		"path": "0.12.7"
+	}
+}
