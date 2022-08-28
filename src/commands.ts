@@ -22,7 +22,7 @@ export function initCommandTemplate(command: string | undefined, fileInfo: Parse
 export interface CommandToSpawn {
 	command: string,
 	cwd?: string
-};
+}
 
 export function spawnCommand(command: CommandToSpawn): ChildProcessWithoutNullStreams {
 	if (process.platform === 'win32') {
@@ -39,12 +39,13 @@ export function spawnCommand(command: CommandToSpawn): ChildProcessWithoutNullSt
 
 const running = new Map<string, ChildProcessWithoutNullStreams>();
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type OnCloseListener = (exitCode: number | null, signal: any) => void;
 
 export function listenCommand(command: CommandToSpawn, onClose: OnCloseListener, input?: string): ChildProcessWithoutNullStreams {
 	const child = spawnCommand(command);
 	const rid = random_id();
-	let closeCallback: ((exitCode: number | null, signal: any) => void) | null = (exitCode, signal) => {
+	let closeCallback: OnCloseListener | null = (exitCode, signal) => {
 		running.delete(rid);
 		closeCallback = null;
 		onClose(exitCode, signal);
@@ -66,7 +67,7 @@ export interface OutputProgressOptions {
 	reportMsg?: (time: number) => string,
 	successMsg?: (time: number) => string,
 	failureMsg?: (time: number, failure: string) => string,
-};
+}
 
 function getOptionsWithDefaults(o?: OutputProgressOptions) {
 	o = o || {};
@@ -76,49 +77,55 @@ function getOptionsWithDefaults(o?: OutputProgressOptions) {
 		reportMsg: o.reportMsg || (time => `${jobName} ${(time / 1000).toFixed(1)}s`),
 		successMsg: o.successMsg || (time => `\n[${jobName} finished in ${(time / 1000).toFixed(3)}s]\n`),
 		failureMsg: o.failureMsg || ((time, failure) => `\n[${jobName} failed in ${(time / 1000).toFixed(3)}s with code ${failure}]\n`),
-	}
+	};
 }
 
-function BuildAndRunException() { }
+class BuildAndRunException extends Error { }
 
 export function listenCommandWithOutputAndProgress(command: CommandToSpawn, options?: OutputProgressOptions, input?: string): Thenable<void> {
 	const settings = vscode.workspace.getConfiguration(SETTINGS_NAME);
 	const outputFlushPeriod = settings.get("outputFlushPeriod", 500) as number;
 
-	const openOutputFile: boolean = false;
+	const openOutputFile = false;
 
 	const opt = getOptionsWithDefaults(options);
 
 	const output = getOutputChannel();
-	let outputBuffer: string[] = [];
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let outputBuffer: any[] = [];
 	let outputText = "";
 	let outputFile: WriteStream | null = null;
-	let outputFilePath: string | null = null;
+	let hadIllegalChars = false;
 	output.show(true);
 
 	const flushOutputBuf = function () {
-		if (outputBuffer) {
-			if (outputText.length + outputBuffer.length <= MAX_OUTPUT_VIEW_SIZE) {
-				output.append(outputBuffer.join(''));
-				outputText += outputBuffer;
-			} else {
-				if (outputFile === null) {
-					outputFilePath = randomFilePath('txt');
-					outputFile = createWriteStream(outputFilePath, { flags: 'w' });
-					outputFile.write(outputText);
-					if (openOutputFile) {
-						const openPath = vscode.Uri.parse("file:///" + outputFilePath);
-						vscode.workspace.openTextDocument(openPath).then(doc => {
-							vscode.window.showTextDocument(doc);
-						});
-					} else {
-						output.append("\nFULL OUTPUT IN file:///" + outputFilePath);
-					}
-				}
-				outputFile.write(outputBuffer);
-			}
-			outputBuffer = [];
+		let bufferString = outputBuffer.join('');
+		if (bufferString.includes('\0') && !hadIllegalChars) {
+			hadIllegalChars = true;
+			vscode.window.showWarningMessage(`Output contained null characters!`);
 		}
+		bufferString = bufferString.replaceAll('\0', "\\0");
+
+		if (outputText.length + bufferString.length <= MAX_OUTPUT_VIEW_SIZE) {
+			output.append(bufferString);
+			outputText += bufferString;
+		} else {
+			if (outputFile === null) {
+				const outputFilePath = randomFilePath('txt');
+				outputFile = createWriteStream(outputFilePath, { flags: 'w' });
+				outputFile.write(outputText);
+				if (openOutputFile) {
+					const openPath = vscode.Uri.parse("file:///" + outputFilePath);
+					vscode.workspace.openTextDocument(openPath).then(doc => {
+						vscode.window.showTextDocument(doc);
+					});
+				} else {
+					output.append("\nFULL OUTPUT IN file:///" + outputFilePath);
+				}
+			}
+			outputFile.write(outputBuffer);
+		}
+		outputBuffer = [];
 	};
 
 	return vscode.window.withProgress<void>({
@@ -135,17 +142,18 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 			const startTime = Date.now();
 
 			const statusInt = setInterval(function () {
-				progress.report({ message: opt.reportMsg(Date.now() - startTime) })
+				progress.report({ message: opt.reportMsg(Date.now() - startTime) });
 				try {
 					if (child.pid)
 						process.kill(child.pid, 0);
 				} catch (e) {
+					// ignored
 				}
 			}, 100);
 
 			const outputBufferFlush = setInterval(flushOutputBuf, outputFlushPeriod);
 
-			const child = listenCommand(command, (code: any, signal: any) => {
+			const child = listenCommand(command, (code, signal) => {
 				const endTime = Date.now();
 				clearInterval(statusInt);
 				clearInterval(outputBufferFlush);
@@ -154,7 +162,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				if (code || signal) {
 					const exitCode = (code ? code : signal);
 					output.append(opt.failureMsg(endTime - startTime, exitCode));
-					reject(new (BuildAndRunException as any)());
+					reject(new BuildAndRunException());
 				} else {
 					output.append(opt.successMsg(endTime - startTime));
 					resolve();
@@ -165,6 +173,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				}
 			}, input);
 
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const outHandler = (data: any) => {
 				outputBuffer.push(data);
 			};

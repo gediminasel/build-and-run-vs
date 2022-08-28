@@ -10,9 +10,9 @@ export const SETTINGS_NAME = 'buildAndRun';
 export const TEMP_DIR_NAME = 'vscode_build';
 export const MAX_OUTPUT_VIEW_SIZE = 1000000;
 
-let output_channel: OutputChannel | null = null;
+let outputChannel: OutputChannel | null = null;
 export function getOutputChannel(): OutputChannel {
-	if (output_channel === null)
-		output_channel = window.createOutputChannel(OUTPUT_NAME);
-	return output_channel;
+	if (outputChannel === null)
+		outputChannel = window.createOutputChannel(OUTPUT_NAME);
+	return outputChannel;
 }

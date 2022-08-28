@@ -18,9 +18,9 @@ export function getInputs(text: string, settings: Settings): string[] {
 	}
 
 	const input = [];
-	let pieces = text.split(inputBegin);
+	const pieces = text.split(inputBegin);
 	pieces.shift();
-	for (let p of pieces) {
+	for (const p of pieces) {
 		input.push(p.split(inputEnd, 1)[0]);
 	}
 

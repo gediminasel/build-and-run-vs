@@ -36,7 +36,7 @@ export function saveToTemp(text: string, fileExt: string): Promise<string> {
 			if (err)
 				reject(err);
 			else
-				resolve(filePath)
+				resolve(filePath);
 		});
-	})
+	});
 }

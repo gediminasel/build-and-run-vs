@@ -4,8 +4,8 @@ You should have received a copy of the GNU General Public License along with Bui
 */
 
 import * as vscode from 'vscode';
-import { runFile, compileFile } from './buildAndRun';
-import { getInputs } from './parse_comments';
+import { runFile, compileFile } from './buildCommands';
+import { getInputs } from './parseInput';
 import { parse } from 'path';
 import { getOutputChannel, SETTINGS_NAME } from './constants';
 import { initCommandTemplate, killRunning } from './commands';
@@ -14,15 +14,15 @@ import { cleanupTempFiles, saveToTemp } from './files';
 
 export function activate(context: vscode.ExtensionContext) {
 	const disposable = vscode.commands.registerCommand('build-and-run:build_run', () => {
-		buildAndRun(BRMode.Run)
+		buildAndRun(BRMode.Run);
 	});
 	context.subscriptions.push(disposable);
 	const disposable0 = vscode.commands.registerCommand('build-and-run:build', () => {
-		buildAndRun(BRMode.Build)
+		buildAndRun(BRMode.Build);
 	});
 	context.subscriptions.push(disposable0);
 	const disposable1 = vscode.commands.registerCommand('build-and-run:build_debug', () => {
-		buildAndRun(BRMode.Debug)
+		buildAndRun(BRMode.Debug);
 	});
 	context.subscriptions.push(disposable1);
 	const disposable2 = vscode.commands.registerCommand('build-and-run:kill', () => {
@@ -55,7 +55,7 @@ export interface Settings {
 	ext: string,
 	inputBegin?: string,
 	inputEnd?: string,
-};
+}
 
 async function buildAndRun(mode: BRMode) {
 	const activeDocument = vscode.window.activeTextEditor?.document;
@@ -83,12 +83,12 @@ async function buildAndRun(mode: BRMode) {
 		return;
 	}
 
-	getOutputChannel().appendLine(`\n=== ${activeDocument.fileName} ===`)
+	getOutputChannel().appendLine(`\n=== ${activeDocument.fileName} ===`);
 
 	const buildTemplate = mode === BRMode.Debug && settings.debugBuild ? settings.debugBuild : settings.build;
 	const buildCommand = initCommandTemplate(buildTemplate, fileInfo);
 	if (buildCommand) {
-		await compileFile({ command: buildCommand, cwd: fileInfo.dir }, settings);
+		await compileFile({ command: buildCommand, cwd: fileInfo.dir });
 	}
 	if (mode === BRMode.Build) {
 		if (!buildCommand) {
@@ -133,7 +133,7 @@ async function format() {
 		vscode.window.showErrorMessage(`Format command not found!`);
 		return;
 	}
-	let source = activeDocument.getText();
+	const source = activeDocument.getText();
 
 	const formatted = await formatSource({ command: formatCommand }, settings, source);
 	await activeTextEditor.edit((edit) => {
@@ -145,7 +145,7 @@ async function format() {
 }
 
 export function killAll() {
-	let contained = killRunning();
+	const contained = killRunning();
 	if (!contained) {
 		const output = getOutputChannel();
 		output.clear();

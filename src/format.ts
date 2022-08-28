@@ -24,15 +24,16 @@ export function formatSource(command: CommandToSpawn, settings: Settings, source
 			const program: string[] = [];
 
 			const statusInt = setInterval(function () {
-				progress.report({ message: 'Running ' + Math.floor((Date.now() - startTime) / 100) / 10 + 's' })
+				progress.report({ message: 'Running ' + Math.floor((Date.now() - startTime) / 100) / 10 + 's' });
 				try {
 					if (child.pid)
 						process.kill(child.pid, 0);
 				} catch (e) {
+					// ignore
 				}
 			}, 100);
 
-			const child = listenCommand(command, (code: any, signal: any) => {
+			const child = listenCommand(command, (code, signal) => {
 				clearInterval(statusInt);
 
 				if (code || signal) {

@@ -9,9 +9,9 @@ const compileOptions: OutputProgressOptions = {
 	jobName: "Building",
 	successMsg: (time => `\n[Built in ${(time / 1000).toFixed(3)}s]\n`),
 	failureMsg: ((time, failure) => `\n[Build failed in ${(time / 1000).toFixed(3)}s with code ${failure}]\n`),
-}
+};
 
-export function compileFile(command: CommandToSpawn, settings: any): Thenable<void> {
+export function compileFile(command: CommandToSpawn): Thenable<void> {
 	return listenCommandWithOutputAndProgress(command, compileOptions);
 }
 
@@ -19,7 +19,7 @@ const runOptions: OutputProgressOptions = {
 	jobName: "Running",
 	successMsg: (time => `\n[Finished in ${(time / 1000).toFixed(3)}s]\n`),
 	failureMsg: ((time, failure) => `\n[Failed in ${(time / 1000).toFixed(3)}s with code ${failure}]\n`),
-}
+};
 
 export async function runFile(command: CommandToSpawn, inputs: string[]): Promise<void> {
 	for (const input of inputs) {
