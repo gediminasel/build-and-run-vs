@@ -114,6 +114,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				const outputFilePath = randomFilePath('txt');
 				outputFile = createWriteStream(outputFilePath, { flags: 'w' });
 				outputFile.write(outputText);
+				outputText = "";
 				if (openOutputFile) {
 					const openPath = vscode.Uri.parse("file:///" + outputFilePath);
 					vscode.workspace.openTextDocument(openPath).then(doc => {
@@ -123,7 +124,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 					output.append("\nFULL OUTPUT IN file:///" + outputFilePath);
 				}
 			}
-			outputFile.write(outputBuffer);
+			outputFile.write(bufferString);
 		}
 		outputBuffer = [];
 	};
