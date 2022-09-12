@@ -80,8 +80,6 @@ function getOptionsWithDefaults(o?: OutputProgressOptions) {
 	};
 }
 
-class BuildAndRunException extends Error { }
-
 export function listenCommandWithOutputAndProgress(command: CommandToSpawn, options?: OutputProgressOptions, input?: string): Thenable<void> {
 	const settings = vscode.workspace.getConfiguration(SETTINGS_NAME);
 	const outputFlushPeriod = settings.get("outputFlushPeriod", 500) as number;
@@ -91,8 +89,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 	const opt = getOptionsWithDefaults(options);
 
 	const output = getOutputChannel();
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let outputBuffer: any[] = [];
+	let outputBuffer: Uint8Array[][] = [];
 	let outputText = "";
 	let outputFile: WriteStream | null = null;
 	let hadIllegalChars = false;
@@ -106,7 +103,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 		}
 		bufferString = bufferString.replaceAll('\0', "\\0");
 
-		if (outputText.length + bufferString.length <= MAX_OUTPUT_VIEW_SIZE) {
+		if (outputFile === null && outputText.length + bufferString.length <= MAX_OUTPUT_VIEW_SIZE) {
 			output.append(bufferString);
 			outputText += bufferString;
 		} else {
@@ -124,7 +121,9 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 					output.append("\nFULL OUTPUT IN file:///" + outputFilePath);
 				}
 			}
-			outputFile.write(bufferString);
+			for (const chunk of outputBuffer) {
+				outputFile.write(chunk);
+			}
 		}
 		outputBuffer = [];
 	};
@@ -133,7 +132,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 		location: vscode.ProgressLocation.Window,
 		cancellable: true
 	}, (progress, token) => {
-		return new Promise((resolve, reject) => {
+		return new Promise((resolve) => {
 			token.onCancellationRequested(() => {
 				if (child)
 					killCommand(child);
@@ -163,7 +162,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				if (code || signal) {
 					const exitCode = (code ? code : signal);
 					output.append(opt.failureMsg(endTime - startTime, exitCode));
-					reject(new BuildAndRunException());
+					resolve();
 				} else {
 					output.append(opt.successMsg(endTime - startTime));
 					resolve();
@@ -174,8 +173,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				}
 			}, input);
 
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const outHandler = (data: any) => {
+			const outHandler = (data: Uint8Array[]) => {
 				outputBuffer.push(data);
 			};
 
