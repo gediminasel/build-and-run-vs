@@ -8,7 +8,7 @@ import { runFile, compileFile } from './buildCommands';
 import { getInputs } from './parseInput';
 import { parse } from 'path';
 import { getOutputChannel, SETTINGS_NAME } from './constants';
-import { initCommandTemplate, killRunning } from './commands';
+import { BuildAndRunException, initCommandTemplate, killRunning } from './commands';
 import { formatSource } from './format';
 import { cleanupTempFiles, saveToTemp } from './files';
 
@@ -84,33 +84,38 @@ async function buildAndRun(mode: BRMode) {
 	}
 
 	getOutputChannel().appendLine(`\n=== ${activeDocument.fileName} ===`);
-
-	const buildTemplate = mode === BRMode.Debug && settings.debugBuild ? settings.debugBuild : settings.build;
-	const buildCommand = initCommandTemplate(buildTemplate, fileInfo);
-	if (buildCommand) {
-		await compileFile({ command: buildCommand, cwd: fileInfo.dir });
-	}
-	if (mode === BRMode.Build) {
-		if (!buildCommand) {
-			vscode.window.showErrorMessage(`Build command not found!`);
+	try {
+		const buildTemplate = mode === BRMode.Debug && settings.debugBuild ? settings.debugBuild : settings.build;
+		const buildCommand = initCommandTemplate(buildTemplate, fileInfo);
+		if (buildCommand) {
+			await compileFile({ command: buildCommand, cwd: fileInfo.dir });
 		}
-		return;
-	}
+		if (mode === BRMode.Build) {
+			if (!buildCommand) {
+				vscode.window.showErrorMessage(`Build command not found!`);
+			}
+			return;
+		}
 
-	const inputs = getInputs(activeDocument.getText(), settings);
+		const inputs = getInputs(activeDocument.getText(), settings);
 
-	const runTemplate = mode === BRMode.Debug ? settings.debug : settings.run;
-	if (mode === BRMode.Debug && !runTemplate) {
-		vscode.window.showErrorMessage(`Debug command not found!`);
-		return;
-	}
-	const runCommand = initCommandTemplate(runTemplate, fileInfo);
-	if (runCommand) {
-		await runFile({ command: runCommand, cwd: fileInfo.dir }, inputs);
-	}
+		const runTemplate = mode === BRMode.Debug ? settings.debug : settings.run;
+		if (mode === BRMode.Debug && !runTemplate) {
+			vscode.window.showErrorMessage(`Debug command not found!`);
+			return;
+		}
+		const runCommand = initCommandTemplate(runTemplate, fileInfo);
+		if (runCommand) {
+			await runFile({ command: runCommand, cwd: fileInfo.dir }, inputs);
+		}
 
-	if (!buildCommand && !runCommand) {
-		vscode.window.showErrorMessage(`Neither build nor run commands found!`);
+		if (!buildCommand && !runCommand) {
+			vscode.window.showErrorMessage(`Neither build nor run commands found!`);
+		}
+	} catch(e) {
+		if (e instanceof BuildAndRunException) {
+			// ignored: compile or run failed
+		}
 	}
 }
 

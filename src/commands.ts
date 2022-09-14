@@ -80,6 +80,8 @@ function getOptionsWithDefaults(o?: OutputProgressOptions) {
 	};
 }
 
+export class BuildAndRunException extends Error { }
+
 export function listenCommandWithOutputAndProgress(command: CommandToSpawn, options?: OutputProgressOptions, input?: string): Thenable<void> {
 	const settings = vscode.workspace.getConfiguration(SETTINGS_NAME);
 	const outputFlushPeriod = settings.get("outputFlushPeriod", 500) as number;
@@ -132,7 +134,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 		location: vscode.ProgressLocation.Window,
 		cancellable: true
 	}, (progress, token) => {
-		return new Promise((resolve) => {
+		return new Promise((resolve, reject) => {
 			token.onCancellationRequested(() => {
 				if (child)
 					killCommand(child);
@@ -162,7 +164,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				if (code || signal) {
 					const exitCode = (code ? code : signal);
 					output.append(opt.failureMsg(endTime - startTime, exitCode));
-					resolve();
+					reject(new BuildAndRunException());
 				} else {
 					output.append(opt.successMsg(endTime - startTime));
 					resolve();
