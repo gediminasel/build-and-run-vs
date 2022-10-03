@@ -17,8 +17,8 @@ export function getInputs(document: TextDocument, settings: Settings): string[] 
 	if (inputBegin === undefined && inputEnd === undefined) {
 		return [''];
 	}
-	if (inputBegin === undefined || inputEnd === undefined) {
-		window.showErrorMessage(`Input begin or end marker not found!`);
+	if (!inputBegin || !inputEnd) {
+		window.showErrorMessage(`Input begin or end marker not set!`);
 		return [''];
 	}
 	

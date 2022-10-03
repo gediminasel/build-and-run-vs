@@ -117,6 +117,7 @@
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
 		"package": "vsce package",
+		"publish": "vsce publish",
 		"compile": "tsc -p ./",
 		"lint": "eslint . --ext .ts,.tsx",
 		"watch": "tsc -watch -p ./"
