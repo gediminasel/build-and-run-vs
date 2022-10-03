@@ -97,7 +97,7 @@ async function buildAndRun(mode: BRMode) {
 			return;
 		}
 
-		const inputs = getInputs(activeDocument.getText(), settings);
+		const inputs = getInputs(activeDocument, settings);
 
 		const runTemplate = mode === BRMode.Debug ? settings.debug : settings.run;
 		if (mode === BRMode.Debug && !runTemplate) {
