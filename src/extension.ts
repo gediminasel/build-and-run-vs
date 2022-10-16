@@ -37,7 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
 		cleanupTempFiles();
 	});
 	context.subscriptions.push(disposable4);
-	context.subscriptions.push({ dispose: killAll });
+	context.subscriptions.push({ dispose: killRunning });
 }
 
 enum BRMode {
@@ -64,9 +64,19 @@ async function buildAndRun(mode: BRMode) {
 		return;
 	}
 
+	const currentSettings = vscode.workspace.getConfiguration(SETTINGS_NAME, activeDocument.uri);
+	const onlyOneRunning = currentSettings.get("onlyOneRunning", true) as boolean;
+	if (onlyOneRunning) {
+		killRunning();
+	}
+	const clearBeforeRunning = currentSettings.get("clearBeforeRunning", true) as boolean;
+	if (clearBeforeRunning) {
+		getOutputChannel().clear();
+	}
+
 	const languageId = activeDocument.languageId;
 
-	let settings: Settings | undefined = vscode.workspace.getConfiguration(SETTINGS_NAME, activeDocument.uri).get(languageId);
+	let settings: Settings | undefined = currentSettings.get(languageId);
 
 	let fileInfo;
 	if (activeDocument.isUntitled) {
@@ -149,10 +159,9 @@ async function format() {
 	});
 }
 
-export function killAll() {
+function killAll() {
 	const contained = killRunning();
 	if (!contained) {
-		const output = getOutputChannel();
-		output.clear();
+		getOutputChannel().clear();
 	}
 }
