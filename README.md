@@ -14,9 +14,14 @@ Remember to add key bindings.
 
 Contributions are welcome (please create an issue first and discuss it).
 
+## Installation
+
+See [INSTALL.md](INSTALL.md).
+
 ## Configuration
 
-Example configuration (supports both global `settings.json` or local `.vscode/settings.json`):
+Example configuration (supports both global `settings.json` or local `.vscode/settings.json`),
+don't just replace everything, add this inside settings object:
 
 ```json
 "buildAndRun": {
@@ -37,6 +42,27 @@ Example configuration (supports both global `settings.json` or local `.vscode/se
 		"ext": "py",
 		"format": "black.exe -"
 	}
+```
+
+Full list of language names can be found at [VSC docs](https://code.visualstudio.com/docs/languages/identifiers).
+
+`${file}` will be replaced by the currently open file.  
+`${file_base_name}` will be replaced by `${file}` without extension.
+
+`format` command should take source as input and print formatted code as output.  
+`ext` is the extension to use when running untitled files.
+
+## Commands
+
+List of commands (run by pressing `ctrl+shift+P` or add a key binding):
+
+```txt
+B&R: Build and Run with input
+B&R: Build
+B&R: Build and Debug with input
+B&R: Kill running program
+B&R: Format
+B&R: Cleanup temp files
 ```
 
 ## Input from comments
