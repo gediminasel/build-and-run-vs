@@ -25,29 +25,33 @@ don't just replace everything, add this inside settings object:
 
 ```json
 "buildAndRun": {
-	"cpp": {
-		"build": "g++ -std=gnu++17 -Wall -Wextra -O2 \"${file}\" -o \"${file_base_name}.exe\"",
-		"debugBuild": "g++ -std=gnu++17 -Wall -Wextra -g -O0 \"${file}\" -o \"${file_base_name}.exe\"",
-		"inputBegin": "/*input\n",
-		"inputEnd": "*/",
-		"run": "\"${file_base_name}.exe\"",
-		"debug": "gdb -q -ex \"set print thread-events off\" -ex run -ex \"bt -entry-values compact -frame-arguments scalar -full\" \"${file_base_name}.exe\"",
-		"ext": "cpp",
-		"format": "AStyle.exe --indent=tab --mode=c --project=none"
-	},
-	"python": {
-		"inputBegin": "'''input\n",
-		"inputEnd": "'''",
-		"run": "python -Xutf8 -u \"${file}\"",
-		"ext": "py",
-		"format": "black.exe -"
-	}
+    "cpp": {
+        "build": "g++ -std=gnu++17 -Wall -Wextra -O2 \"${file}\" -o \"${file_base_name}.exe\"",
+        "debugBuild": "g++ -std=gnu++17 -Wall -Wextra -g -O0 \"${file}\" -o \"${file_base_name}.exe\"",
+        "inputBegin": "/*input\n",
+        "inputEnd": "*/",
+        "run": "\"${file_base_name}.exe\"",
+        "debug": "gdb -q -ex \"set print thread-events off\" -ex run -ex \"bt -entry-values compact -frame-arguments scalar -full\" \"${file_base_name}.exe\"",
+        "ext": "cpp",
+        "format": "astyle --indent=tab --mode=c --project=none"
+    },
+    "python": {
+        "inputBegin": "\"\"\"input\n",
+        "inputEnd": "\"\"\"",
+        "run": "python -Xutf8 -u \"${file}\"",
+        "ext": "py",
+        "format": "black -"
+    }
+}
 ```
 
 Full list of language names can be found at [VSC docs](https://code.visualstudio.com/docs/languages/identifiers).
 
 `${file}` will be replaced by the currently open file.  
-`${file_base_name}` will be replaced by `${file}` without extension.
+`${file_path}` by the currently open file's directory.  
+`${file_base_name}` by `${file}` without extension.  
+`${workspace_path}` by the path of the first folder of the workspace
+(or `${file_path}` if no workspace is open).
 
 `format` command should take source as input and print formatted code as output.  
 `ext` is the extension to use when running untitled files.
@@ -78,12 +82,13 @@ a
 b
 */
 int main() {
-	std::string x; std::cin >> x; std::cout << x << x;
+    std::string x; std::cin >> x; std::cout << x << x;
 }
 ```
 
 Example output (program executed twice, with different inputs):
-```
+
+```txt
 [Built in 0.612s]
 aa
 [Finished in 0.037s]

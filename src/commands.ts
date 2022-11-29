@@ -16,7 +16,8 @@ export function initCommandTemplate(command: string | undefined, fileInfo: Parse
 		return command;
 	return command.split('${file_path}').join(fileInfo.dir)
 		.split('${file}').join(fileInfo.base)
-		.split('${file_base_name}').join(fileInfo.name);
+		.split('${file_base_name}').join(fileInfo.name)
+		.split('${workspace_path}').join(vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath || fileInfo.dir);
 }
 
 export interface CommandToSpawn {
