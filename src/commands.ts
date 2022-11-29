@@ -7,9 +7,10 @@ import * as vscode from 'vscode';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import { createWriteStream, WriteStream } from 'fs';
 import { ParsedPath } from 'path';
-import { getOutputChannel, MAX_OUTPUT_VIEW_SIZE, SETTINGS_NAME } from './constants';
+import { MAX_OUTPUT_VIEW_SIZE, SETTINGS_NAME } from './constants';
 import { random_id } from './random';
 import { randomFilePath } from './files';
+import TaggedOutputChannel from './outputChannel';
 
 export function initCommandTemplate(command: string | undefined, fileInfo: ParsedPath) {
 	if (!command)
@@ -38,28 +39,35 @@ export function spawnCommand(command: CommandToSpawn): ChildProcessWithoutNullSt
 	}
 }
 
-const running = new Map<string, ChildProcessWithoutNullStreams>();
+export type RunningProcess = {
+	process: ChildProcessWithoutNullStreams;
+	wasKilled: boolean;
+};
+
+const running = new Map<string, RunningProcess>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type OnCloseListener = (exitCode: number | null, signal: any) => void;
+export type OnCloseListener = (exitCode: number | null, signal: any, wasKilled: boolean) => void;
 
-export function listenCommand(command: CommandToSpawn, onClose: OnCloseListener, input?: string): ChildProcessWithoutNullStreams {
+export function listenCommand(command: CommandToSpawn, onClose: OnCloseListener, input?: string): RunningProcess {
 	const child = spawnCommand(command);
 	const rid = random_id();
 	let closeCallback: OnCloseListener | null = (exitCode, signal) => {
+		const p = running.get(rid);
 		running.delete(rid);
 		closeCallback = null;
-		onClose(exitCode, signal);
+		onClose(exitCode, signal, p?.wasKilled || false);
 	};
 	const close = (code?: number | null, signal?: NodeJS.Signals) => {
 		if (code === undefined)
 			code = child.exitCode;
-		if (closeCallback) closeCallback(code, signal);
+		if (closeCallback) closeCallback(code, signal, false);
 	};
 	child.on("close", close);
-	running.set(rid, child);
+	const proc = { process: child, wasKilled: false };
+	running.set(rid, proc);
 	child.stdin.end(input);
-	return child;
+	return proc;
 }
 
 // time in milliseconds
@@ -91,7 +99,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 
 	const opt = getOptionsWithDefaults(options);
 
-	const output = getOutputChannel();
+	const output = TaggedOutputChannel.get();
 	let outputBuffer: Uint8Array[][] = [];
 	let outputText = "";
 	let outputFile: WriteStream | null = null;
@@ -147,8 +155,8 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 			const statusInt = setInterval(function () {
 				progress.report({ message: opt.reportMsg(Date.now() - startTime) });
 				try {
-					if (child.pid)
-						process.kill(child.pid, 0);
+					if (child.process.pid)
+						process.kill(child.process.pid, 0);
 				} catch (e) {
 					// ignored
 				}
@@ -177,21 +185,23 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 			}, input);
 
 			const outHandler = (data: Uint8Array[]) => {
-				outputBuffer.push(data);
+				if (!child.wasKilled)
+					outputBuffer.push(data);
 			};
 
-			child.stderr.on("data", outHandler);
-			child.stdout.on("data", outHandler);
+			child.process.stderr.on("data", outHandler);
+			child.process.stdout.on("data", outHandler);
 		});
 	});
 }
 
-export function killCommand(child: ChildProcessWithoutNullStreams): void {
+export function killCommand(proc: RunningProcess): void {
+	proc.wasKilled = true;
 	if (process.platform === 'win32') {
-		if (child.pid)
-			spawn("taskkill", ["/pid", child.pid.toFixed(0), '/f', '/t']);
+		if (proc.process.pid)
+			spawn("taskkill", ["/pid", proc.process.pid.toFixed(0), '/f', '/t']);
 	} else {
-		child.kill('SIGKILL');
+		proc.process.kill('SIGKILL');
 	}
 }
 

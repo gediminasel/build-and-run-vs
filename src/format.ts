@@ -5,8 +5,8 @@ You should have received a copy of the GNU General Public License along with Bui
 
 import * as vscode from 'vscode';
 import { CommandToSpawn, killCommand, listenCommand } from './commands';
-import { getOutputChannel } from './constants';
 import { Settings } from './extension';
+import TaggedOutputChannel from './outputChannel';
 
 export function formatSource(command: CommandToSpawn, settings: Settings, source: string): Thenable<string> {
 	return vscode.window.withProgress<string>({
@@ -19,15 +19,15 @@ export function formatSource(command: CommandToSpawn, settings: Settings, source
 					killCommand(child);
 			});
 
+			const output = TaggedOutputChannel.get();
 			const startTime = Date.now();
-
 			const program: string[] = [];
 
 			const statusInt = setInterval(function () {
 				progress.report({ message: 'Running ' + Math.floor((Date.now() - startTime) / 100) / 10 + 's' });
 				try {
-					if (child.pid)
-						process.kill(child.pid, 0);
+					if (child.process.pid)
+						process.kill(child.process.pid, 0);
 				} catch (e) {
 					// ignore
 				}
@@ -43,10 +43,10 @@ export function formatSource(command: CommandToSpawn, settings: Settings, source
 				}
 			}, source);
 
-			child.stderr.on("data", (data) => {
-				getOutputChannel().append("" + data);
+			child.process.stderr.on("data", (data) => {
+				output.append("" + data);
 			});
-			child.stdout.on("data", (data) => {
+			child.process.stdout.on("data", (data) => {
 				program.push(data);
 			});
 		});

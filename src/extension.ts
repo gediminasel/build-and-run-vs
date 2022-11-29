@@ -7,10 +7,11 @@ import * as vscode from 'vscode';
 import { runFile, compileFile } from './buildCommands';
 import { getInputs } from './parseInput';
 import { parse } from 'path';
-import { getOutputChannel, SETTINGS_NAME } from './constants';
+import { SETTINGS_NAME } from './constants';
 import { BuildAndRunException, initCommandTemplate, killRunning } from './commands';
 import { formatSource } from './format';
 import { cleanupTempFiles, saveToTemp } from './files';
+import TaggedOutputChannel from './outputChannel';
 
 export function activate(context: vscode.ExtensionContext) {
 	const disposable = vscode.commands.registerCommand('build-and-run:build_run', () => {
@@ -71,7 +72,7 @@ async function buildAndRun(mode: BRMode) {
 	}
 	const clearBeforeRunning = currentSettings.get("clearBeforeRunning", true) as boolean;
 	if (clearBeforeRunning) {
-		getOutputChannel().clear();
+		TaggedOutputChannel.clear();
 	}
 
 	const languageId = activeDocument.languageId;
@@ -93,7 +94,7 @@ async function buildAndRun(mode: BRMode) {
 		return;
 	}
 
-	getOutputChannel().appendLine(`\n=== ${activeDocument.fileName} ===`);
+	TaggedOutputChannel.get().appendLine(`\n=== ${activeDocument.fileName} ===`);
 	try {
 		const buildTemplate = mode === BRMode.Debug && settings.debugBuild ? settings.debugBuild : settings.build;
 		const buildCommand = initCommandTemplate(buildTemplate, fileInfo);
@@ -122,7 +123,7 @@ async function buildAndRun(mode: BRMode) {
 		if (!buildCommand && !runCommand) {
 			vscode.window.showErrorMessage(`Neither build nor run commands found!`);
 		}
-	} catch(e) {
+	} catch (e) {
 		if (e instanceof BuildAndRunException) {
 			// ignored: compile or run failed
 		}
@@ -162,6 +163,6 @@ async function format() {
 function killAll() {
 	const contained = killRunning();
 	if (!contained) {
-		getOutputChannel().clear();
+		TaggedOutputChannel.clear();
 	}
 }
