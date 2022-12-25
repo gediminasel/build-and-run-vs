@@ -24,7 +24,7 @@ export function formatSource(command: CommandToSpawn, settings: Settings, source
 			const program: string[] = [];
 
 			const statusInt = setInterval(function () {
-				progress.report({ message: 'Running ' + Math.floor((Date.now() - startTime) / 100) / 10 + 's' });
+				progress.report({ message: 'Running ' + ((Date.now() - startTime) / 1000).toFixed(1) + 's' });
 				try {
 					if (child.process.pid)
 						process.kill(child.process.pid, 0);
