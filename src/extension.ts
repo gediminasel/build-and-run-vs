@@ -5,7 +5,7 @@ You should have received a copy of the GNU General Public License along with Bui
 
 import * as vscode from 'vscode';
 import { runFile, compileFile } from './buildCommands';
-import { getInputs } from './parseInput';
+import { getInputs, Input } from './parseInput';
 import { parse } from 'path';
 import { SETTINGS_NAME } from './constants';
 import { BuildAndRunException, initCommandTemplate, killRunning } from './commands';
@@ -56,6 +56,8 @@ export interface Settings {
 	ext: string,
 	inputBegin?: string,
 	inputEnd?: string,
+	outputBegin?: string,
+	outputEnd?: string,
 }
 
 async function buildAndRun(mode: BRMode) {
@@ -109,6 +111,9 @@ async function buildAndRun(mode: BRMode) {
 		}
 
 		const inputs = getInputs(activeDocument, settings);
+		if (inputs.length === 0) {
+			inputs.push(new Input('', null));
+		}
 
 		const runTemplate = mode === BRMode.Debug ? settings.debug : settings.run;
 		if (mode === BRMode.Debug && !runTemplate) {

@@ -11,6 +11,8 @@ import { MAX_OUTPUT_VIEW_SIZE, SETTINGS_NAME } from './constants';
 import { random_id } from './random';
 import { randomFilePath } from './files';
 import TaggedOutputChannel from './outputChannel';
+import { Input } from './parseInput';
+import { OutputChecker } from './checker';
 
 export function initCommandTemplate(command: string | undefined, fileInfo: ParsedPath) {
 	if (!command)
@@ -91,7 +93,7 @@ function getOptionsWithDefaults(o?: OutputProgressOptions) {
 
 export class BuildAndRunException extends Error { }
 
-export function listenCommandWithOutputAndProgress(command: CommandToSpawn, options?: OutputProgressOptions, input?: string): Thenable<void> {
+export function listenCommandWithOutputAndProgress(command: CommandToSpawn, options?: OutputProgressOptions, input?: Input): Thenable<void> {
 	const settings = vscode.workspace.getConfiguration(SETTINGS_NAME);
 	const outputFlushPeriod = settings.get("outputFlushPeriod", 500) as number;
 
@@ -106,7 +108,15 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 	let hadIllegalChars = false;
 	output.show(true);
 
+	let outputChecker = input?.expectedOutput ? new OutputChecker(input.expectedOutput) : null;
+
 	const flushOutputBuf = function () {
+		if (outputChecker && outputChecker.good) {
+			return;
+		} else if (outputChecker) {
+			outputChecker = null;
+			output.appendLine("!!!OUTPUT DIDN'T MATCH!!!");
+		}
 		let bufferString = outputBuffer.join('');
 		if (bufferString.includes('\0') && !hadIllegalChars) {
 			hadIllegalChars = true;
@@ -123,13 +133,14 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				outputFile = createWriteStream(outputFilePath, { flags: 'w' });
 				outputFile.write(outputText);
 				outputText = "";
+				const uri = "file://" + (outputFilePath.startsWith('/') ? '' : '/') + outputFilePath;
 				if (openOutputFile) {
-					const openPath = vscode.Uri.parse("file:///" + outputFilePath);
+					const openPath = vscode.Uri.parse(uri);
 					vscode.workspace.openTextDocument(openPath).then(doc => {
 						vscode.window.showTextDocument(doc);
 					});
 				} else {
-					output.append("\nFULL OUTPUT IN file:///" + outputFilePath);
+					output.append("\nFULL OUTPUT IN " + uri);
 				}
 			}
 			for (const chunk of outputBuffer) {
@@ -168,7 +179,11 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				const endTime = Date.now();
 				clearInterval(statusInt);
 				clearInterval(outputBufferFlush);
+				outputChecker?.finish();
 				flushOutputBuf();
+				if (outputChecker && outputChecker.good) {
+					output.append("Output matched");
+				}
 
 				if (code || signal) {
 					const exitCode = (code ? code : signal);
@@ -182,11 +197,13 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				if (outputFile) {
 					outputFile.end();
 				}
-			}, input);
+			}, input?.input);
 
 			const outHandler = (data: Uint8Array[]) => {
-				if (!child.wasKilled)
+				if (!child.wasKilled) {
+					outputChecker?.eat("" + data);
 					outputBuffer.push(data);
+				}
 			};
 
 			child.process.stderr.on("data", outHandler);

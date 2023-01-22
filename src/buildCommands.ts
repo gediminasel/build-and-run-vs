@@ -4,6 +4,7 @@ You should have received a copy of the GNU General Public License along with Bui
 */
 
 import { CommandToSpawn, listenCommandWithOutputAndProgress, OutputProgressOptions } from './commands';
+import { Input } from './parseInput';
 
 const compileOptions: OutputProgressOptions = {
 	jobName: "Building",
@@ -21,7 +22,7 @@ const runOptions: OutputProgressOptions = {
 	failureMsg: ((time, failure) => `\n[Failed in ${(time / 1000).toFixed(3)}s with code ${failure}]\n`),
 };
 
-export async function runFile(command: CommandToSpawn, inputs: string[]): Promise<void> {
+export async function runFile(command: CommandToSpawn, inputs: Input[]): Promise<void> {
 	for (const input of inputs) {
 		await listenCommandWithOutputAndProgress(command, runOptions, input);
 	}
