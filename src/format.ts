@@ -4,16 +4,16 @@ You should have received a copy of the GNU General Public License along with Bui
 */
 
 import * as vscode from 'vscode';
-import { CommandToSpawn, killCommand, listenCommand } from './commands';
-import { Settings } from './extension';
+import { CommandToSpawn, RunningProcess, killCommand, listenCommand } from './commands';
 import TaggedOutputChannel from './outputChannel';
 
-export function formatSource(command: CommandToSpawn, settings: Settings, source: string): Thenable<string> {
+export function formatSource(command: CommandToSpawn, returnStdout: boolean, source: string): Thenable<string> {
 	return vscode.window.withProgress<string>({
 		location: vscode.ProgressLocation.Window,
 		cancellable: true
 	}, (progress, token) => {
 		return new Promise((resolve, reject) => {
+			let child: RunningProcess|null = null;
 			token.onCancellationRequested(() => {
 				if (child)
 					killCommand(child);
@@ -26,14 +26,13 @@ export function formatSource(command: CommandToSpawn, settings: Settings, source
 			const statusInt = setInterval(function () {
 				progress.report({ message: 'Running ' + ((Date.now() - startTime) / 1000).toFixed(1) + 's' });
 				try {
-					if (child.process.pid)
+					if (child?.process.pid)
 						process.kill(child.process.pid, 0);
 				} catch (e) {
 					// ignore
 				}
 			}, 100);
-
-			const child = listenCommand(command, (code, signal) => {
+			child = listenCommand(command, (code, signal) => {
 				clearInterval(statusInt);
 
 				if (code || signal) {
@@ -47,7 +46,11 @@ export function formatSource(command: CommandToSpawn, settings: Settings, source
 				output.append("" + data);
 			});
 			child.process.stdout.on("data", (data) => {
-				program.push(data);
+				if (returnStdout) {
+					program.push(data);
+				} else {
+					output.append("" + data);
+				}
 			});
 		});
 	});

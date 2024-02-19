@@ -4,7 +4,7 @@ You should have received a copy of the GNU General Public License along with Bui
 */
 
 import { EndOfLine, TextDocument, window } from "vscode";
-import { Settings } from "./extension";
+import { Settings } from "./settings";
 
 const EolSymbols = {
 	[EndOfLine.LF]: '\n',

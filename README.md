@@ -26,10 +26,12 @@ don't just replace everything, add this inside settings object:
 ```json
 "buildAndRun": {
     "cpp": {
-        "build": "g++ -std=gnu++17 -Wall -Wextra -O2 \"${file}\" -o \"${file_base_name}.exe\"",
-        "debugBuild": "g++ -std=gnu++17 -Wall -Wextra -g -O0 \"${file}\" -o \"${file_base_name}.exe\"",
+        "build": "g++ -std=gnu++20 -Wall -Wextra -O2 \"${file}\" -o \"${file_base_name}.exe\"",
+        "debugBuild": "g++ -std=gnu++20 -Wall -Wextra -g -O0 \"${file}\" -o \"${file_base_name}.exe\"",
         "inputBegin": "/*input\n",
         "inputEnd": "*/",
+        "outputBegin": "/*output\n",
+        "outputEnd": "*/",
         "run": "\"${file_base_name}.exe\"",
         "debug": "gdb -q -ex \"set print thread-events off\" -ex run -ex \"bt -entry-values compact -frame-arguments scalar -full\" \"${file_base_name}.exe\"",
         "ext": "cpp",
@@ -38,23 +40,26 @@ don't just replace everything, add this inside settings object:
     "python": {
         "inputBegin": "\"\"\"input\n",
         "inputEnd": "\"\"\"",
+        "outputBegin": "\"\"\"output\n",
+        "outputEnd": "\"\"\"",
         "run": "python -Xutf8 -u \"${file}\"",
         "ext": "py",
-        "format": "black -"
+        "format": "ruff check - --fix | ruff format --line-length 120 -"
     }
 }
 ```
 
 Full list of language names can be found at [VSC docs](https://code.visualstudio.com/docs/languages/identifiers).
 
+For more details on what each option does, please read comments in [src/settings.ts](src/settings.ts)
+
+In command strings you can use the following variables:
+
 `${file}` will be replaced by the currently open file.  
 `${file_path}` by the currently open file's directory.  
 `${file_base_name}` by `${file}` without extension.  
 `${workspace_path}` by the path of the first folder of the workspace
 (or `${file_path}` if no workspace is open).
-
-`format` command should take source as input and print formatted code as output.  
-`ext` is the extension to use when running untitled files.
 
 ## Commands
 

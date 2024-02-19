@@ -6,12 +6,14 @@ You should have received a copy of the GNU General Public License along with Bui
 import * as vscode from 'vscode';
 import { runFile, compileFile } from './buildCommands';
 import { getInputs, Input } from './parseInput';
-import { parse } from 'path';
+import { join, parse } from 'path';
+import { promises } from 'fs';
 import { SETTINGS_NAME } from './constants';
 import { BuildAndRunException, initCommandTemplate, killRunning } from './commands';
 import { formatSource } from './format';
-import { cleanupTempFiles, saveToTemp } from './files';
+import { cleanupTempFiles, fileOrTempInfo } from './files';
 import TaggedOutputChannel from './outputChannel';
+import { Settings } from './settings';
 
 export function activate(context: vscode.ExtensionContext) {
 	const disposable = vscode.commands.registerCommand('build-and-run:build_run', () => {
@@ -47,19 +49,6 @@ enum BRMode {
 	Debug
 }
 
-export interface Settings {
-	run?: string,
-	build?: string,
-	debug?: string,
-	debugBuild?: string,
-	format?: string,
-	ext: string,
-	inputBegin?: string,
-	inputEnd?: string,
-	outputBegin?: string,
-	outputEnd?: string,
-}
-
 async function buildAndRun(mode: BRMode) {
 	const activeDocument = vscode.window.activeTextEditor?.document;
 	if (!activeDocument) {
@@ -79,22 +68,14 @@ async function buildAndRun(mode: BRMode) {
 
 	const languageId = activeDocument.languageId;
 
-	let settings: Settings | undefined = currentSettings.get(languageId);
-
-	let fileInfo;
-	if (activeDocument.isUntitled) {
-		settings = settings || { ext: 'file' };
-		fileInfo = parse(await saveToTemp(activeDocument.getText(), settings.ext));
-	} else {
-		if (activeDocument.isDirty)
-			await activeDocument.save();
-		fileInfo = parse(activeDocument.uri.fsPath);
-	}
+	const settings: Settings | undefined = currentSettings.get(languageId);
 
 	if (!settings) {
 		vscode.window.showErrorMessage(`Unknown language ${languageId}!`);
 		return;
 	}
+
+	const fileInfo = await fileOrTempInfo(activeDocument, settings.ext);
 
 	TaggedOutputChannel.get().appendLine(`\n=== ${activeDocument.fileName} ===`);
 	try {
@@ -149,20 +130,33 @@ async function format() {
 		vscode.window.showErrorMessage(`Unknown language ${languageId}!`);
 		return;
 	}
-	const formatCommand = settings.format;
+	const useStdin = settings.formatStdin !== false;
+	let fileInfo = parse(activeDocument.uri.fsPath);
+	if (useStdin) {
+		// We're ok with the file being dirty or not saved at all.
+		fileInfo = parse(activeDocument.uri.fsPath);
+	} else {
+		fileInfo = await fileOrTempInfo(activeDocument, settings.ext);
+	}
+	const formatCommand = initCommandTemplate(settings.format, fileInfo);
 	if (!formatCommand) {
 		vscode.window.showErrorMessage(`Format command not found!`);
 		return;
 	}
 	const source = activeDocument.getText();
 
-	const formatted = await formatSource({ command: formatCommand }, settings, source);
-	await activeTextEditor.edit((edit) => {
-		const firstLine = activeTextEditor.document.lineAt(0);
-		const lastLine = activeTextEditor.document.lineAt(activeTextEditor.document.lineCount - 1);
-		edit.delete(new vscode.Range(firstLine.range.start, lastLine.range.end));
-		edit.insert(new vscode.Position(0, 0), formatted);
-	});
+	let formatted = await formatSource({ command: formatCommand }, useStdin, source);
+	if (useStdin || activeDocument.isUntitled) {
+		if (!useStdin) {
+			formatted = await promises.readFile(join(fileInfo.dir, fileInfo.base), 'utf8');
+		}
+		await activeTextEditor.edit((edit) => {
+			const firstLine = activeTextEditor.document.lineAt(0);
+			const lastLine = activeTextEditor.document.lineAt(activeTextEditor.document.lineCount - 1);
+			edit.delete(new vscode.Range(firstLine.range.start, lastLine.range.end));
+			edit.insert(new vscode.Position(0, 0), formatted);
+		});
+	}
 }
 
 function killAll() {

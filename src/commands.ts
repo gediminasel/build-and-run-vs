@@ -14,8 +14,8 @@ import TaggedOutputChannel from './outputChannel';
 import { Input } from './parseInput';
 import { OutputChecker } from './checker';
 
-export function initCommandTemplate(command: string | undefined, fileInfo: ParsedPath) {
-	if (!command)
+export function initCommandTemplate(command: string | undefined, fileInfo: ParsedPath | undefined) {
+	if (!command || !fileInfo)
 		return command;
 	return command.split('${file_path}').join(fileInfo.dir)
 		.split('${file}').join(fileInfo.base)

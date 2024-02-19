@@ -6,8 +6,9 @@ You should have received a copy of the GNU General Public License along with Bui
 import { random_id } from './random';
 import { tmpdir } from 'os';
 import { mkdir, rmdir, writeFile } from 'fs';
-import { join } from 'path';
+import { join, parse } from 'path';
 import { TEMP_DIR_NAME } from './constants';
+import { TextDocument } from 'vscode';
 
 const TEMP_DIR = join(tmpdir(), TEMP_DIR_NAME);
 
@@ -39,4 +40,14 @@ export function saveToTemp(text: string, fileExt: string): Promise<string> {
 				resolve(filePath);
 		});
 	});
+}
+
+export async function fileOrTempInfo(activeDocument: TextDocument, extension?: string){
+	if (activeDocument.isUntitled) {
+		return parse(await saveToTemp(activeDocument.getText(), extension || 'file'));
+	} else {
+		if (activeDocument.isDirty)
+			await activeDocument.save();
+		return parse(activeDocument.uri.fsPath);
+	}
 }
