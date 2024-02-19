@@ -9,6 +9,7 @@ Build programs automatically and run them with input from source code comments.
 - Fully customizable.
 - Multiple runs.
 - Format code.
+- Compare with expected output.
 
 Remember to add key bindings.
 
