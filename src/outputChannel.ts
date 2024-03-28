@@ -7,40 +7,41 @@ import { OutputChannel, window } from "vscode";
 import { OUTPUT_NAME } from "./constants";
 
 export default class TaggedOutputChannel {
-	static outputChannel: TaggedOutputChannel | null = null;
-	channel: OutputChannel;
-	isActive: boolean;
-	constructor(channel: OutputChannel) {
-		this.channel = channel;
-		this.isActive = true;
-	}
+	static outputChannel: OutputChannel | null = null;
+	static activeChannel: TaggedOutputChannel | null = null;
 	clear() {
-		this.channel.clear();
-		this.isActive = false;
-		TaggedOutputChannel.outputChannel = null;
+		if (!this.isActive())
+			return;
+		TaggedOutputChannel.outputChannel?.clear();
+		TaggedOutputChannel.activeChannel = null;
 	}
 	append(value: string) {
-		if (this.isActive)
-			this.channel.append(value);
+		if (this.isActive())
+			TaggedOutputChannel.outputChannel?.append(value);
 	}
 	appendLine(value: string) {
-		if (this.isActive)
-			this.channel.appendLine(value);
+		if (this.isActive())
+			TaggedOutputChannel.outputChannel?.appendLine(value);
 	}
 	show(preserveFocus?: boolean) {
-		if (this.isActive)
-			this.channel.show(preserveFocus);
+		if (this.isActive())
+			TaggedOutputChannel.outputChannel?.show(preserveFocus);
+	}
+	isActive() {
+		return TaggedOutputChannel.activeChannel === this;
 	}
 	static get(): TaggedOutputChannel {
-		if (this.outputChannel === null) {
-			const channel = window.createOutputChannel(OUTPUT_NAME);
-			this.outputChannel = new TaggedOutputChannel(channel);
+		if (this.activeChannel === null) {
+			if (this.outputChannel === null) {
+				this.outputChannel = window.createOutputChannel(OUTPUT_NAME);
+			}
+			this.activeChannel = new TaggedOutputChannel();
 		}
-		return this.outputChannel;
+		return this.activeChannel;
 	}
 	static clear() {
-		if (this.outputChannel) {
-			this.outputChannel.clear();
+		if (this.activeChannel) {
+			this.activeChannel.clear();
 		}
 	}
 }

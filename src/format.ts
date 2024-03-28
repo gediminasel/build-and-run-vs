@@ -36,7 +36,7 @@ export function formatSource(command: CommandToSpawn, returnStdout: boolean, sou
 				clearInterval(statusInt);
 
 				if (code || signal) {
-					reject("NON-ZERO-RETURN");
+					reject("NON-ZERO-RETURN: " + (code || signal) + "\n" + program.join(''));
 				} else {
 					resolve(program.join(''));
 				}
