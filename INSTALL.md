@@ -2,8 +2,9 @@
 
 1. Install [Visual Studio Code](https://code.visualstudio.com/Download).
 2. Install compilers and/or interpreters. Make sure they are added to PATH.
-3. Configure B&R extension in VS Code. (See [README](README.md))
-4. Add key bindings for `B&R` commands. (See [VSC docs](https://code.visualstudio.com/docs/getstarted/keybindings))
+3. Install Build and Run extension from [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=glelesius.build-and-run).
+4. Configure B&R extension in VS Code. (See [README](README.md))
+5. Add key bindings for `B&R` commands. (See [VSC docs](https://code.visualstudio.com/docs/getstarted/keybindings))
 
 ## Installing G++/Python on Ubuntu/Debian
 

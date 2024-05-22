@@ -17,7 +17,8 @@ Contributions are welcome (please create an issue first and discuss it).
 
 ## Installation
 
-See [INSTALL.md](INSTALL.md).
+Install from [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=glelesius.build-and-run).
+See [INSTALL.md](INSTALL.md) for more details.
 
 ## Configuration
 
