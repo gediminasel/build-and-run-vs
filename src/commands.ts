@@ -199,15 +199,17 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				}
 			}, input?.input);
 
-			const outHandler = (data: Uint8Array[]) => {
+			child.process.stderr.on("data", (data: Uint8Array[]) => {
+				if (!child.wasKilled) {
+					outputBuffer.push(data);
+				}
+			});
+			child.process.stdout.on("data", (data: Uint8Array[]) => {
 				if (!child.wasKilled) {
 					outputChecker?.eat("" + data);
 					outputBuffer.push(data);
 				}
-			};
-
-			child.process.stderr.on("data", outHandler);
-			child.process.stdout.on("data", outHandler);
+			});
 		});
 	});
 }
