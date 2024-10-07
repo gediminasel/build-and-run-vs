@@ -5,14 +5,13 @@ You should have received a copy of the GNU General Public License along with Bui
 
 import * as vscode from 'vscode';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
-import { createWriteStream, WriteStream } from 'fs';
 import { ParsedPath } from 'path';
-import { MAX_OUTPUT_VIEW_SIZE, SETTINGS_NAME } from './constants';
+import { SETTINGS_NAME } from './constants';
 import { random_id } from './random';
-import { randomFilePath } from './files';
 import TaggedOutputChannel from './outputChannel';
 import { Input } from './parseInput';
 import { OutputChecker } from './checker';
+import BufferedLimitedChannel from './bufferedLimitedChannel';
 
 export function initCommandTemplate(command: string | undefined, fileInfo: ParsedPath | undefined) {
 	if (!command || !fileInfo)
@@ -95,60 +94,13 @@ export class BuildAndRunException extends Error { }
 
 export function listenCommandWithOutputAndProgress(command: CommandToSpawn, options?: OutputProgressOptions, input?: Input): Thenable<void> {
 	const settings = vscode.workspace.getConfiguration(SETTINGS_NAME);
-	const outputFlushPeriod = settings.get("outputFlushPeriod", 500) as number;
-
-	const openOutputFile = false;
 
 	const opt = getOptionsWithDefaults(options);
 
 	const output = TaggedOutputChannel.get();
-	let outputBuffer: Uint8Array[][] = [];
-	let outputText = "";
-	let outputFile: WriteStream | null = null;
-	let hadIllegalChars = false;
 	output.show(true);
-
-	let outputChecker = input?.expectedOutput ? new OutputChecker(input.expectedOutput) : null;
-
-	const flushOutputBuf = function () {
-		if (outputChecker && outputChecker.good) {
-			return;
-		} else if (outputChecker) {
-			outputChecker = null;
-			output.appendLine("!!!OUTPUT DIDN'T MATCH!!!");
-		}
-		let bufferString = outputBuffer.join('');
-		if (bufferString.includes('\0') && !hadIllegalChars) {
-			hadIllegalChars = true;
-			vscode.window.showWarningMessage(`Output contained null characters!`);
-		}
-		bufferString = bufferString.replaceAll('\0', "\\0");
-
-		if (outputFile === null && outputText.length + bufferString.length <= MAX_OUTPUT_VIEW_SIZE) {
-			output.append(bufferString);
-			outputText += bufferString;
-		} else {
-			if (outputFile === null) {
-				const outputFilePath = randomFilePath('txt');
-				outputFile = createWriteStream(outputFilePath, { flags: 'w' });
-				outputFile.write(outputText);
-				outputText = "";
-				const uri = "file://" + (outputFilePath.startsWith('/') ? '' : '/') + outputFilePath;
-				if (openOutputFile) {
-					const openPath = vscode.Uri.parse(uri);
-					vscode.workspace.openTextDocument(openPath).then(doc => {
-						vscode.window.showTextDocument(doc);
-					});
-				} else {
-					output.append("\nFULL OUTPUT IN " + uri);
-				}
-			}
-			for (const chunk of outputBuffer) {
-				outputFile.write(chunk);
-			}
-		}
-		outputBuffer = [];
-	};
+	const bufferedOutput = new BufferedLimitedChannel(settings.get<number>("outputFlushPeriod", 500), output, false);
+	const outputChecker = input?.expectedOutput ? new OutputChecker(input.expectedOutput) : null;
 
 	return vscode.window.withProgress<void>({
 		location: vscode.ProgressLocation.Window,
@@ -173,16 +125,19 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				}
 			}, 100);
 
-			const outputBufferFlush = setInterval(flushOutputBuf, outputFlushPeriod);
-
 			const child = listenCommand(command, (code, signal) => {
 				const endTime = Date.now();
 				clearInterval(statusInt);
-				clearInterval(outputBufferFlush);
-				outputChecker?.finish();
-				flushOutputBuf();
-				if (outputChecker && outputChecker.good) {
-					output.append("Output matched");
+
+				bufferedOutput.close();
+
+				if (outputChecker) {
+					outputChecker.finish();
+					if (outputChecker.good) {
+						output.append("\nOutput matched");
+					} else {
+						output.append("\n!!!OUTPUT DID NOT MATCH!!!");
+					}
 				}
 
 				if (code || signal) {
@@ -193,22 +148,17 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 					output.append(opt.successMsg(endTime - startTime));
 					resolve();
 				}
-
-				if (outputFile) {
-					outputFile.end();
-				}
 			}, input?.input);
+			bufferedOutput.start();
 
 			child.process.stderr.on("data", (data: Uint8Array[]) => {
-				if (!child.wasKilled) {
-					outputBuffer.push(data);
-				}
+				if (child.wasKilled) return;
+				bufferedOutput.append(data);
 			});
 			child.process.stdout.on("data", (data: Uint8Array[]) => {
-				if (!child.wasKilled) {
-					outputChecker?.eat("" + data);
-					outputBuffer.push(data);
-				}
+				if (child.wasKilled) return;
+				outputChecker?.eat("" + data);
+				bufferedOutput.append(data);
 			});
 		});
 	});
