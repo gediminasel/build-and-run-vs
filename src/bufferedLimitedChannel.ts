@@ -13,15 +13,16 @@ import TaggedOutputChannel from "./outputChannel";
 // if output is huge.
 export default class BufferedLimitedChannel {
 	private outputFlushPeriod: number;
-	private output: TaggedOutputChannel;
+	private output: TaggedOutputChannel | null;
 	private openOutputFile: boolean;
 
 	private outputBuffer: Uint8Array[][] = [];
 	private totalOutputSize = 0;
-	private allOutput: Uint8Array[][] = [];
+	private truncatedOutput: Uint8Array[][] = [];
 	private outputFile: WriteStream | null = null;
 	private hadIllegalChars = false;
 	private outputBufferFlush: NodeJS.Timeout | null = null;
+	private fullOutputFile = "";
 
 	constructor(outputFlushPeriod: number, output: TaggedOutputChannel, openOutputFile: boolean) {
 		this.outputFlushPeriod = outputFlushPeriod;
@@ -32,6 +33,7 @@ export default class BufferedLimitedChannel {
 		this.outputBufferFlush = setInterval(this.flush.bind(this), this.outputFlushPeriod);
 	}
 	append(chunk: Uint8Array[]) {
+		if (this.output === null) throw new Error("Append called after close");
 		if (this.outputFile !== null) {
 			// Write to a file directly -- file handles buffering.
 			this.outputFile.write(chunk);
@@ -43,10 +45,18 @@ export default class BufferedLimitedChannel {
 			this.flush();
 		}
 	}
+	getTruncatedOutput(): string {
+		let output = this.truncatedOutput.join('').replaceAll('\0', "\\0");
+		if (this.fullOutputFile) {
+			output += "...TRUNCATED\nFull output in " + this.fullOutputFile;
+		}
+		return output;
+	}
 	private flush() {
+		if (this.output === null) return;
 		if (this.outputBuffer.length === 0) return;
 		let bufferString = this.outputBuffer.join('');
-		this.allOutput.push(...this.outputBuffer);
+		this.truncatedOutput.push(...this.outputBuffer);
 		this.outputBuffer = [];
 		if (bufferString.includes('\0') && !this.hadIllegalChars) {
 			this.hadIllegalChars = true;
@@ -60,18 +70,17 @@ export default class BufferedLimitedChannel {
 			if (this.outputFile === null) {
 				const outputFilePath = randomFilePath('txt');
 				this.outputFile = createWriteStream(outputFilePath, { flags: 'w' });
-				for (const chunk of this.allOutput) {
+				for (const chunk of this.truncatedOutput) {
 					this.outputFile.write(chunk);
 				}
-				this.allOutput = [];
-				const uri = "file://" + (outputFilePath.startsWith('/') ? '' : '/') + outputFilePath;
+				this.fullOutputFile = "file://" + (outputFilePath.startsWith('/') ? '' : '/') + outputFilePath;
 				if (this.openOutputFile) {
-					const openPath = Uri.parse(uri);
+					const openPath = Uri.parse(this.fullOutputFile);
 					workspace.openTextDocument(openPath).then(doc => {
 						window.showTextDocument(doc);
 					});
 				} else {
-					this.output.append("\nFULL OUTPUT IN " + uri);
+					this.output.append("\nFULL OUTPUT IN " + this.fullOutputFile);
 				}
 			}
 			if (this.outputBufferFlush !== null) {
@@ -89,5 +98,6 @@ export default class BufferedLimitedChannel {
 		if (this.outputFile !== null) {
 			this.outputFile.close();
 		}
+		this.output = null;
 	}
 }

@@ -5,6 +5,9 @@ You should have received a copy of the GNU General Public License along with Bui
 
 import { CommandToSpawn, listenCommandWithOutputAndProgress, OutputProgressOptions } from './commands';
 import { Input } from './parseInput';
+import { Result } from './result';
+
+export class BuildAndRunException extends Error {}
 
 const compileOptions: OutputProgressOptions = {
 	jobName: "Building",
@@ -13,7 +16,11 @@ const compileOptions: OutputProgressOptions = {
 };
 
 export function compileFile(command: CommandToSpawn): Thenable<void> {
-	return listenCommandWithOutputAndProgress(command, compileOptions);
+	return listenCommandWithOutputAndProgress(command, compileOptions).then(result => {
+		if (!result.executionOk) {
+			throw new BuildAndRunException();
+		}
+	});
 }
 
 const runOptions: OutputProgressOptions = {
@@ -22,8 +29,13 @@ const runOptions: OutputProgressOptions = {
 	failureMsg: ((time, failure) => `\n[Failed in ${(time / 1000).toFixed(3)}s with code ${failure}]\n`),
 };
 
-export async function runFile(command: CommandToSpawn, inputs: Input[]): Promise<void> {
+export async function runFile(command: CommandToSpawn, inputs: Input[], resultReporter: (input: Input, result: Result | null) => void): Promise<void> {
 	for (const input of inputs) {
-		await listenCommandWithOutputAndProgress(command, runOptions, input);
+		resultReporter(input, null);
+		const r = await listenCommandWithOutputAndProgress(command, runOptions, input);
+		resultReporter(input, r);
+		if (!r.executionOk) {
+			break;
+		}
 	}
 }

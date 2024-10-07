@@ -3,8 +3,9 @@ This file is part of BuildAndRun by Gediminas Lelesius <g@lelesius.eu>.
 You should have received a copy of the GNU General Public License along with BuildAndRun. If not, see <https://www.gnu.org/licenses/gpl-3.0.en.html>.
 */
 
-import { EndOfLine, TextDocument, window } from "vscode";
+import { EndOfLine, Position, TextDocument, window, Range } from "vscode";
 import { Settings } from "./settings";
+import { countOccurrences } from "./utils";
 
 const EolSymbols = {
 	[EndOfLine.LF]: '\n',
@@ -12,9 +13,11 @@ const EolSymbols = {
 };
 
 export class Input {
+	location: Range | null;
 	input: string;
 	expectedOutput: string | null;
-	constructor(input: string, expectedOutput: string | null) {
+	constructor(location: Range | null, input: string, expectedOutput: string | null) {
+		this.location = location;
 		this.input = input;
 		this.expectedOutput = expectedOutput;
 	}
@@ -32,15 +35,19 @@ export function getInputs(document: TextDocument, settings: Settings): Input[] {
 	}
 
 	const settingsEol = (inputBegin.indexOf('\r\n') === -1 && inputEnd.indexOf('\r\n') === -1) ? EndOfLine.LF : EndOfLine.CRLF;
-
+	const documentEol = EolSymbols[document.eol];
 	const input = [];
-	const adaptedInputBegin = inputBegin.replaceAll(EolSymbols[settingsEol], EolSymbols[document.eol]);
-	const adaptedInputEnd = inputEnd.replaceAll(EolSymbols[settingsEol], EolSymbols[document.eol]);
-	const adaptedOutputBegin = outputBegin?.replaceAll(EolSymbols[settingsEol], EolSymbols[document.eol]);
-	const adaptedOutputEnd = outputEnd?.replaceAll(EolSymbols[settingsEol], EolSymbols[document.eol]);
+	const adaptedInputBegin = inputBegin.replaceAll(EolSymbols[settingsEol], documentEol);
+	const adaptedInputEnd = inputEnd.replaceAll(EolSymbols[settingsEol], documentEol);
+	const adaptedOutputBegin = outputBegin?.replaceAll(EolSymbols[settingsEol], documentEol);
+	const adaptedOutputEnd = outputEnd?.replaceAll(EolSymbols[settingsEol], documentEol);
 	const pieces = document.getText().split(adaptedInputBegin);
+	let line = countOccurrences(pieces[0], documentEol);
 	pieces.shift();
 	for (const p of pieces) {
+		const lineStart = line;
+		line += countOccurrences(adaptedInputBegin, documentEol);
+		line += countOccurrences(p, documentEol);
 		if (!p.includes(adaptedInputEnd)) {
 			continue;
 		}
@@ -54,7 +61,7 @@ export function getInputs(document: TextDocument, settings: Settings): Input[] {
 				output = null;
 			}
 		}
-		const inp = new Input(inpStr, output);
+		const inp = new Input(new Range(new Position(lineStart, 0), new Position(line, 0)), inpStr, output);
 		input.push(inp);
 	}
 	return input;

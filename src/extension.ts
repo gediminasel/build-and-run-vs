@@ -4,16 +4,18 @@ You should have received a copy of the GNU General Public License along with Bui
 */
 
 import * as vscode from 'vscode';
-import { runFile, compileFile } from './buildCommands';
+import { runFile, compileFile, BuildAndRunException } from './buildCommands';
 import { getInputs, Input } from './parseInput';
 import { join, parse } from 'path';
 import { promises } from 'fs';
 import { SETTINGS_NAME } from './constants';
-import { BuildAndRunException, initCommandTemplate, killRunning } from './commands';
+import { initCommandTemplate, killRunning } from './commands';
 import { formatSource } from './format';
 import { cleanupTempFiles, fileOrTempInfo } from './files';
 import TaggedOutputChannel from './outputChannel';
 import { Settings } from './settings';
+import BnRTestController from './testController';
+import BnRTestRun from './testRun';
 
 export function activate(context: vscode.ExtensionContext) {
 	const disposable = vscode.commands.registerCommand('build-and-run:build_run', () => {
@@ -41,6 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(disposable4);
 	context.subscriptions.push({ dispose: killRunning });
+	context.subscriptions.push(BnRTestController.get().controller);
 }
 
 enum BRMode {
@@ -78,6 +81,7 @@ async function buildAndRun(mode: BRMode) {
 	const fileInfo = await fileOrTempInfo(activeDocument, settings.ext);
 
 	TaggedOutputChannel.get().appendLine(`\n=== ${activeDocument.fileName} ===`);
+	let testsRun: BnRTestRun | null = null;
 	try {
 		const buildTemplate = mode === BRMode.Debug && settings.debugBuild ? settings.debugBuild : settings.build;
 		const buildCommand = initCommandTemplate(buildTemplate, fileInfo);
@@ -93,8 +97,10 @@ async function buildAndRun(mode: BRMode) {
 
 		const inputs = getInputs(activeDocument, settings);
 		if (inputs.length === 0) {
-			inputs.push(new Input('', null));
+			inputs.push(new Input(null, '', null));
 		}
+		BnRTestController.get().updateTests(activeDocument, inputs);
+		testsRun = BnRTestController.get().startRun(activeDocument);
 
 		const runTemplate = mode === BRMode.Debug ? settings.debug : settings.run;
 		if (mode === BRMode.Debug && !runTemplate) {
@@ -103,7 +109,7 @@ async function buildAndRun(mode: BRMode) {
 		}
 		const runCommand = initCommandTemplate(runTemplate, fileInfo);
 		if (runCommand) {
-			await runFile({ command: runCommand, cwd: fileInfo.dir }, inputs);
+			await runFile({ command: runCommand, cwd: fileInfo.dir }, inputs, (i, r) => r ? testsRun?.report(r) : testsRun?.start(i));
 		}
 
 		if (!buildCommand && !runCommand) {
@@ -113,6 +119,9 @@ async function buildAndRun(mode: BRMode) {
 		if (e instanceof BuildAndRunException) {
 			// ignored: compile or run failed
 		}
+	}
+	if (testsRun) {
+		testsRun.end();
 	}
 }
 

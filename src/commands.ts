@@ -12,6 +12,7 @@ import TaggedOutputChannel from './outputChannel';
 import { Input } from './parseInput';
 import { OutputChecker } from './checker';
 import BufferedLimitedChannel from './bufferedLimitedChannel';
+import { Result } from './result';
 
 export function initCommandTemplate(command: string | undefined, fileInfo: ParsedPath | undefined) {
 	if (!command || !fileInfo)
@@ -90,9 +91,7 @@ function getOptionsWithDefaults(o?: OutputProgressOptions) {
 	};
 }
 
-export class BuildAndRunException extends Error { }
-
-export function listenCommandWithOutputAndProgress(command: CommandToSpawn, options?: OutputProgressOptions, input?: Input): Thenable<void> {
+export function listenCommandWithOutputAndProgress(command: CommandToSpawn, options?: OutputProgressOptions, input?: Input): Thenable<Result> {
 	const settings = vscode.workspace.getConfiguration(SETTINGS_NAME);
 
 	const opt = getOptionsWithDefaults(options);
@@ -102,11 +101,11 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 	const bufferedOutput = new BufferedLimitedChannel(settings.get<number>("outputFlushPeriod", 500), output, false);
 	const outputChecker = input?.expectedOutput ? new OutputChecker(input.expectedOutput) : null;
 
-	return vscode.window.withProgress<void>({
+	return vscode.window.withProgress<Result>({
 		location: vscode.ProgressLocation.Window,
 		cancellable: true
 	}, (progress, token) => {
-		return new Promise((resolve, reject) => {
+		return new Promise((resolve) => {
 			token.onCancellationRequested(() => {
 				if (child)
 					killCommand(child);
@@ -139,14 +138,14 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 						output.append("\n!!!OUTPUT DID NOT MATCH!!!");
 					}
 				}
-
+				const duration = endTime - startTime;
 				if (code || signal) {
 					const exitCode = (code ? code : signal);
-					output.append(opt.failureMsg(endTime - startTime, exitCode));
-					reject(new BuildAndRunException());
+					output.append(opt.failureMsg(duration , exitCode));
+					resolve(new Result(input ?? null, false, false, "", duration));
 				} else {
-					output.append(opt.successMsg(endTime - startTime));
-					resolve();
+					output.append(opt.successMsg(duration ));
+					resolve(new Result(input ?? null, true, outputChecker?.good ?? null, bufferedOutput.getTruncatedOutput(), duration));
 				}
 			}, input?.input);
 			bufferedOutput.start();

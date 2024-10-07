@@ -2,7 +2,7 @@
 	"name": "build-and-run",
 	"displayName": "Build and Run",
 	"description": "Build and Run your code with ease. Pass input from source comments.",
-	"version": "2.1.0",
+	"version": "2.2.0",
 	"publisher": "glelesius",
 	"bugs": {
 		"url": "https://github.com/gediminasel/build-and-run-vs/issues",
