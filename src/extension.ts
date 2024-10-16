@@ -16,6 +16,7 @@ import TaggedOutputChannel from './outputChannel';
 import { Settings } from './settings';
 import BnRTestController from './testController';
 import BnRTestRun from './testRun';
+import { updateWithFormatting } from './formatting';
 
 export function activate(context: vscode.ExtensionContext) {
 	const disposable = vscode.commands.registerCommand('build-and-run:build_run', () => {
@@ -159,12 +160,11 @@ async function format() {
 		if (!useStdin) {
 			formatted = await promises.readFile(join(fileInfo.dir, fileInfo.base), 'utf8');
 		}
-		await activeTextEditor.edit((edit) => {
-			const firstLine = activeTextEditor.document.lineAt(0);
-			const lastLine = activeTextEditor.document.lineAt(activeTextEditor.document.lineCount - 1);
-			edit.delete(new vscode.Range(firstLine.range.start, lastLine.range.end));
-			edit.insert(new vscode.Position(0, 0), formatted);
-		});
+		if (source === formatted) {
+			// already formatted.
+			return;
+		}
+		await updateWithFormatting(activeTextEditor, formatted);
 	}
 }
 
