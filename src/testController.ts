@@ -3,7 +3,7 @@ This file is part of BuildAndRun by Gediminas Lelesius <g@lelesius.eu>.
 You should have received a copy of the GNU General Public License along with BuildAndRun. If not, see <https://www.gnu.org/licenses/gpl-3.0.en.html>.
 */
 
-import { TestController, tests, TextDocument, Uri, TestItem, Range, TestRunRequest, workspace} from "vscode";
+import { TestController, tests, TextDocument, Uri, TestItem, Range, TestRunRequest, workspace, Disposable} from "vscode";
 import { Input } from "./parseInput";
 import BnRTestRun from "./testRun";
 
@@ -73,5 +73,8 @@ export default class BnRTestController {
 			));
 		}
 		return this.instance;
+	}
+	disposables(): Disposable[] {
+		return [this.controller];
 	}
 }

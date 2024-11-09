@@ -65,12 +65,17 @@
 				},
 				"buildAndRun.onlyOneRunning": {
 					"type": "boolean",
-					"description": "If checked, currently running program will be killed before compiling and running a new one.",
+					"description": "If enabled, currently running program will be killed before compiling and running a new one.",
 					"default": true
 				},
 				"buildAndRun.clearBeforeRunning": {
 					"type": "boolean",
-					"description": "If checked, will clear the output of previous program before running compiling a new one.",
+					"description": "If enabled, will clear the output of previous program before running compiling a new one.",
+					"default": true
+				},
+				"buildAndRun.showResultInline": {
+					"type": "boolean",
+					"description": "If enabled, will show build results inline using Tests API in addition to Output panel.",
 					"default": true
 				},
 				"buildAndRun": {
@@ -140,6 +145,6 @@
 		"eslint": "^8.19.0",
 		"path": "0.12.7",
 		"typescript": "^4.7.4",
-		"vsce": "^2.15.0"
+		"@vscode/vsce": "^3.2.1"
 	}
 }

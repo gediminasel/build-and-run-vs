@@ -44,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(disposable4);
 	context.subscriptions.push({ dispose: killRunning });
-	context.subscriptions.push(BnRTestController.get().controller);
+	context.subscriptions.push(...BnRTestController.get().disposables());
 }
 
 enum BRMode {
@@ -81,6 +81,8 @@ async function buildAndRun(mode: BRMode) {
 
 	const fileInfo = await fileOrTempInfo(activeDocument, settings.ext);
 
+	const showResultInline = currentSettings.get("showResultInline", true) as boolean;
+
 	TaggedOutputChannel.get().appendLine(`\n=== ${activeDocument.fileName} ===`);
 	let testsRun: BnRTestRun | null = null;
 	try {
@@ -100,8 +102,10 @@ async function buildAndRun(mode: BRMode) {
 		if (inputs.length === 0) {
 			inputs.push(new Input(null, '', null));
 		}
-		BnRTestController.get().updateTests(activeDocument, inputs);
-		testsRun = BnRTestController.get().startRun(activeDocument);
+		if (showResultInline) {
+			BnRTestController.get().updateTests(activeDocument, inputs);
+			testsRun = BnRTestController.get().startRun(activeDocument);
+		}
 
 		const runTemplate = mode === BRMode.Debug ? settings.debug : settings.run;
 		if (mode === BRMode.Debug && !runTemplate) {
