@@ -13,7 +13,7 @@ Build programs automatically and run them with input from source code comments.
 
 Remember to add key bindings.
 
-Contributions are welcome (please create an issue first and discuss it).
+Contributions are welcome (please create an issue first to discuss the idea).
 
 ## Installation
 
@@ -22,31 +22,40 @@ See [INSTALL.md](INSTALL.md) for more details.
 
 ## Configuration
 
-Example configuration (supports both global `settings.json` or local `.vscode/settings.json`),
-don't just replace everything, add this inside settings object:
+Modify language agnostic options by searching `@ext:glelesius.build-and-run` in
+the settings UI (`ctrl+shift+P` and `Preferences: Open Settings (UI)`).
+
+Language-specific options must be configured using json format (`ctrl+shift+P`
+and `Preferences: Open User Settings (JSON)` or
+`Preferences: Open Workspace Settings (JSON)`).
+
+Example configuration (don't just replace everything!, add this inside settings object):
 
 ```json
-"buildAndRun": {
-    "cpp": {
-        "build": "g++ -std=gnu++20 -Wall -Wextra -O2 \"${file}\" -o \"${file_base_name}.exe\"",
-        "debugBuild": "g++ -std=gnu++20 -Wall -Wextra -g -O0 \"${file}\" -o \"${file_base_name}.exe\"",
-        "inputBegin": "/*input\n",
-        "inputEnd": "*/",
-        "outputBegin": "/*output\n",
-        "outputEnd": "*/",
-        "run": "\"${file_base_name}.exe\"",
-        "debug": "gdb -q -ex \"set print thread-events off\" -ex run -ex \"bt -entry-values compact -frame-arguments scalar -full\" \"${file_base_name}.exe\"",
-        "ext": "cpp",
-        "format": "astyle --indent=tab --mode=c --project=none"
-    },
-    "python": {
-        "inputBegin": "\"\"\"input\n",
-        "inputEnd": "\"\"\"",
-        "outputBegin": "\"\"\"output\n",
-        "outputEnd": "\"\"\"",
-        "run": "python -Xutf8 -u \"${file}\"",
-        "ext": "py",
-        "format": "ruff check - --fix | ruff format --line-length 120 -"
+{
+    // There should already be some existing values, don't delete them, append this:
+    "buildAndRun": {
+        "cpp": {
+            "build": "g++ -std=gnu++23 -Wall -Wextra -O2 \"${file}\" -o \"${file_base_name}.exe\"",
+            "debugBuild": "g++ -std=gnu++23 -Wall -Wextra -g -O0 \"${file}\" -o \"${file_base_name}.exe\"",
+            "inputBegin": "/*input\n",
+            "inputEnd": "*/",
+            "outputBegin": "/*output\n",
+            "outputEnd": "*/",
+            "run": "\"./${file_base_name}.exe\"",
+            "debug": "gdb -q -ex \"set print thread-events off\" -ex run -ex \"bt -entry-values compact -frame-arguments scalar -full\" \"${file_base_name}.exe\"",
+            "ext": "cpp",
+            "format": "astyle --indent=tab --mode=c --project=none"
+        },
+        "python": {
+            "inputBegin": "\"\"\"input\n",
+            "inputEnd": "\"\"\"",
+            "outputBegin": "\"\"\"output\n",
+            "outputEnd": "\"\"\"",
+            "run": "python -Xutf8 -u \"${file}\"",
+            "ext": "py",
+            "format": "ruff check - --fix | ruff format --line-length 120 -"
+        }
     }
 }
 ```
@@ -57,10 +66,10 @@ For more details on what each option does, please read comments in [src/settings
 
 In command strings you can use the following variables:
 
-`${file}` will be replaced by the currently open file.  
-`${file_path}` by the currently open file's directory.  
-`${file_base_name}` by `${file}` without extension.  
-`${workspace_path}` by the path of the first folder of the workspace
+- `${file}` will be replaced by the name of the currently open file (or temp file if untitled).
+- `${file_path}` by the directory of the currently open file (or temp directory).
+- `${file_base_name}` by `${file}` without extension.
+- `${workspace_path}` by the path of the first folder of the workspace
 (or `${file_path}` if no workspace is open).
 
 ## Commands
@@ -85,6 +94,9 @@ C++ example:
 /*input
 a
 */
+/*output
+aa
+*/
 /*input
 b
 */
@@ -96,22 +108,26 @@ int main() {
 Example output (program executed twice, with different inputs):
 
 ```txt
-[Built in 0.612s]
+[Built in 0.816s]
 aa
-[Finished in 0.037s]
+Output matched
+[Finished in 0.006s]
 bb
-[Finished in 0.039s]
+[Finished in 0.006s]
 ```
 
 Python example:
 
 ```py
-'''input
+"""input
 a
-'''
-'''input
+"""
+"""output
+aa
+"""
+"""input
 b
-'''
+"""
 x = input()
 print(x, x, sep='')
 ```

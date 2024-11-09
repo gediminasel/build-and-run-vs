@@ -13,7 +13,6 @@ sudo apt install g++
 sudo apt install python
 ~~~
 
-
 ## Installing G++ on Windows
 
 1. Go to [WinLibs](https://winlibs.com/).
