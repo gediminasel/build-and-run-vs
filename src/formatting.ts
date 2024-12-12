@@ -15,20 +15,21 @@ export async function updateWithFormatting(editor: TextEditor, formatted: string
 	const lines = formatted.split(eolSymbol);
 	await editor.edit((edit) => {
 		let firstDiff = 0;
-		for (; firstDiff < editor.document.lineCount && firstDiff < lines.length; firstDiff++) {
+		const lineCount = editor.document.lineCount;
+		for (; firstDiff < lineCount && firstDiff < lines.length; firstDiff++) {
 			if (editor.document.lineAt(firstDiff).text != lines[firstDiff]) {
 				break;
 			}
 		}
 		let lastDiff = 1;
-		for (; lastDiff < editor.document.lineCount && lastDiff < lines.length; lastDiff++) {
-			if (editor.document.lineAt(editor.document.lineCount - lastDiff).text != lines[lines.length - lastDiff]) {
+		for (; lastDiff < lineCount && lastDiff < lines.length && lineCount - lastDiff > firstDiff; lastDiff++) {
+			if (editor.document.lineAt(lineCount - lastDiff).text != lines[lines.length - lastDiff]) {
 				break;
 			}
 		}
 		const changedValue = lines.slice(firstDiff, lastDiff > 1 ? -lastDiff + 1 : undefined).join(eolSymbol);
 		const firstLine = editor.document.lineAt(firstDiff);
-		const lastLine = editor.document.lineAt(editor.document.lineCount - lastDiff);
+		const lastLine = editor.document.lineAt(lineCount - lastDiff);
 		edit.replace(new Range(firstLine.range.start, lastLine.range.end), changedValue);
 	});
 }
