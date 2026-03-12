@@ -41,8 +41,7 @@ export type RunningProcess = {
 
 const running = new Set<RunningProcess>();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type OnCloseListener = (exitCode: number | null, signal: any, error: string | null, wasKilled: boolean) => void;
+export type OnCloseListener = (exitCode: number | null, signal: NodeJS.Signals | null, error: string | null, wasKilled: boolean) => void;
 
 export function listenCommand(command: CommandToSpawn, onClose: OnCloseListener, input?: string): RunningProcess {
 	const proc = { process: spawnCommand(command), wasKilled: false };
@@ -55,7 +54,7 @@ export function listenCommand(command: CommandToSpawn, onClose: OnCloseListener,
 	const close = (code?: number | null, signal?: NodeJS.Signals) => {
 		if (code === undefined)
 			code = proc.process.exitCode;
-		if (closeCallback) closeCallback(code, signal, null, false);
+		if (closeCallback) closeCallback(code, signal || null, null, false);
 	};
 	const error = (err: Error) => {
 		console.error("Error spawning command", err);
@@ -128,12 +127,12 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 					}
 				}
 				const duration = endTime - startTime;
+				const exitCode = (code || signal);
 				if (error) {
 					output.append(opt.errorMsg(error));
 					resolve(new Result(input ?? null, false, false, "", duration));
-				} else if (code || signal) {
-					const exitCode = (code || signal);
-					output.append(opt.failureMsg(duration, exitCode));
+				} else if (exitCode) {
+					output.append(opt.failureMsg(duration, "" + exitCode));
 					resolve(new Result(input ?? null, false, false, "", duration));
 				} else {
 					output.append(opt.successMsg(duration));

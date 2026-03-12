@@ -4,6 +4,9 @@ You should have received a copy of the GNU General Public License along with Bui
 */
 
 export function countOccurrences(string: string, substring: string): number {
+	if (!substring) {
+		return string.length;
+	}
 	let count = 0;
 	let index = 0;
 	while ((index = string.indexOf(substring, index)) !== -1) {

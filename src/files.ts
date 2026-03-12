@@ -5,7 +5,7 @@ You should have received a copy of the GNU General Public License along with Bui
 
 import { random_id } from './random';
 import { tmpdir } from 'os';
-import { mkdir, rmdir, writeFile } from 'fs';
+import { mkdir, rm, writeFile, readdir } from 'fs';
 import { join, parse } from 'path';
 import { TEMP_DIR_NAME } from './constants';
 import { TextDocument } from 'vscode';
@@ -13,10 +13,19 @@ import { TextDocument } from 'vscode';
 const TEMP_DIR = join(tmpdir(), TEMP_DIR_NAME);
 
 export function cleanupTempFiles(): void {
-	rmdir(TEMP_DIR, { recursive: true }, (err) => {
+	readdir(TEMP_DIR, {withFileTypes: true}, (err, files) => {
 		if (err) {
 			console.error(err);
+			return;
 		}
+		files.forEach(file => {
+			if (!file.isFile()) return;
+			rm(join(TEMP_DIR, file.name), (err) => {
+				if (err) {
+					console.error(err);
+				}
+			});
+		});
 	});
 }
 
