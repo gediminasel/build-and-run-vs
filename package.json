@@ -168,5 +168,12 @@
 		"eslint": "^10.0.3",
 		"path": "0.12.7",
 		"typescript": "^5.9.3"
-	}
+	},
+	"files": [
+		"out/**/*",
+		"INSTALL.md",
+		"LICENSE.txt",
+		"package.json",
+		"README.md"
+	]
 }
