@@ -7,7 +7,6 @@ import * as vscode from 'vscode';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import { ParsedPath } from 'path';
 import { SETTINGS_NAME } from './constants';
-import { random_id } from './random';
 import TaggedOutputChannel from './outputChannel';
 import { Input } from './parseInput';
 import { OutputChecker } from './checker';
@@ -40,34 +39,34 @@ export type RunningProcess = {
 	wasKilled: boolean;
 };
 
-const running = new Map<string, RunningProcess>();
+const running = new Set<RunningProcess>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type OnCloseListener = (exitCode: number | null, signal: any, error: string | null, wasKilled: boolean) => void;
 
 export function listenCommand(command: CommandToSpawn, onClose: OnCloseListener, input?: string): RunningProcess {
-	const child = spawnCommand(command);
-	const rid = random_id();
+	const proc = { process: spawnCommand(command), wasKilled: false };
+	running.add(proc);
 	let closeCallback: OnCloseListener | null = (exitCode, signal, error) => {
-		const p = running.get(rid);
-		running.delete(rid);
+		running.delete(proc);
 		closeCallback = null;
-		onClose(exitCode, signal, error, p?.wasKilled || false);
+		onClose(exitCode, signal, error, proc.wasKilled || false);
 	};
 	const close = (code?: number | null, signal?: NodeJS.Signals) => {
 		if (code === undefined)
-			code = child.exitCode;
+			code = proc.process.exitCode;
 		if (closeCallback) closeCallback(code, signal, null, false);
 	};
 	const error = (err: Error) => {
 		console.error("Error spawning command", err);
-		if (closeCallback) closeCallback(-1, null, "Failed to run command " + command.command.join(" ") + ": " + err.message, false);
+		if (closeCallback) {
+			const msg = "Failed to run command " + command.command.join(" ") + ": " + err.message;
+			closeCallback(-1, null, msg, false);
+		}
 	};
-	child.on("close", close);
-	child.on("error", error);
-	const proc = { process: child, wasKilled: false };
-	running.set(rid, proc);
-	child.stdin.end(input);
+	proc.process.on("close", close);
+	proc.process.on("error", error);
+	proc.process.stdin.end(input);
 	return proc;
 }
 
@@ -107,27 +106,16 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 		cancellable: true
 	}, (progress, token) => {
 		return new Promise((resolve) => {
-			token.onCancellationRequested(() => {
-				if (child)
-					killCommand(child);
-			});
-
 			progress.report({ message: opt.reportMsg(0) });
 			const startTime = Date.now();
 
-			const statusInt = setInterval(function () {
-				progress.report({ message: opt.reportMsg(Date.now() - startTime) });
-				try {
-					if (child.process.pid)
-						process.kill(child.process.pid, 0);
-				} catch (e) {
-					// ignored
-				}
-			}, 100);
+			let statusInt: NodeJS.Timeout | null = null;
 
 			const child = listenCommand(command, (code, signal, error) => {
 				const endTime = Date.now();
-				clearInterval(statusInt);
+				if (statusInt !== null) {
+					clearInterval(statusInt);
+				}
 
 				bufferedOutput.close();
 
@@ -153,6 +141,21 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				}
 			}, input?.input);
 			bufferedOutput.start();
+
+			token.onCancellationRequested(() => {
+				killCommand(child);
+			});
+
+			statusInt = setInterval(function () {
+				progress.report({ message: opt.reportMsg(Date.now() - startTime) });
+				try {
+					// Test that it's still running.
+					if (child.process.pid)
+						process.kill(child.process.pid, 0);
+				} catch (e) {
+					// ignored
+				}
+			}, 100);
 
 			child.process.stderr.on("data", (data: Uint8Array[]) => {
 				if (child.wasKilled) return;
