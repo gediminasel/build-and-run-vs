@@ -2,7 +2,7 @@
 	"name": "build-and-run",
 	"displayName": "Build and Run",
 	"description": "Build and Run your code with ease. Pass input from source comments.",
-	"version": "2.2.1",
+	"version": "3.0.0",
 	"publisher": "glelesius",
 	"bugs": {
 		"url": "https://github.com/gediminasel/build-and-run-vs/issues",
@@ -78,51 +78,73 @@
 					"description": "If enabled, will show build results inline using Tests API in addition to Output panel.",
 					"default": true
 				},
-				"buildAndRun": {
+				"buildAndRun.languageConfigs": {
 					"type": "object",
 					"description": "Build and Run configuration.",
-					"properties": {
-						"cpp": {
-							"type": "object",
-							"description": "Build and Run C++ configuration.",
-							"properties": {
-								"build": {
-									"type": "string",
-									"description": "C++ build command"
-								},
-								"run": {
-									"type": "string",
-									"description": "C++ run command"
-								},
-								"debug": {
-									"type": "string",
-									"description": "C++ debug run command"
-								},
-								"debugBuild": {
-									"type": "string",
-									"description": "C++ debug build command"
-								},
-								"format": {
-									"type": "string",
-									"description": "C++ format command"
-								},
-								"inputBegin": {
-									"type": "string",
-									"description": "C++ input comment begin symbols"
-								},
-								"inputEnd": {
-									"type": "string",
-									"description": "C++ input commend end symbols"
+					"additionalProperties": {
+						"type": "object",
+						"description": "Build and Run language configuration.",
+						"properties": {
+							"build": {
+								"type": "array",
+								"description": "Build command with arguments",
+								"items": {
+									"type": "string"
 								}
+							},
+							"run": {
+								"type": "array",
+								"description": "Run command with arguments",
+								"items": {
+									"type": "string"
+								}
+							},
+							"debugBuild": {
+								"type": "array",
+								"description": "Debug build command",
+								"items": {
+									"type": "string"
+								}
+							},
+							"debugRun": {
+								"type": "array",
+								"description": "Debug run command with arguments",
+								"items": {
+									"type": "string"
+								}
+							},
+							"format": {
+								"type": "array",
+								"description": "Format command with arguments",
+								"items": {
+									"type": "string"
+								}
+							},
+							"formatStdin": {
+								"type": "boolean",
+								"description": "Whether to pass input file contents to the format command via stdin",
+								"default": true
+							},
+							"inputBegin": {
+								"type": "string",
+								"description": "Input comment begin symbols"
+							},
+							"inputEnd": {
+								"type": "string",
+								"description": "Input comment end symbols"
+							},
+							"outputBegin": {
+								"type": "string",
+								"description": "Output comment begin symbols"
+							},
+							"outputEnd": {
+								"type": "string",
+								"description": "Output comment end symbols"
+							},
+							"ext": {
+								"type": "string",
+								"description": "File extension for temporary files when running unsaved buffers"
 							}
-						},
-						"python": {
-							"type": "object",
-							"description": "Build and Run Python configuration."
-						},
-						"latex": {
-							"type": "object",
-							"description": "Build and Run Latex configuration."
 						}
 					}
 				}

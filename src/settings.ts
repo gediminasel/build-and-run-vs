@@ -6,16 +6,16 @@ You should have received a copy of the GNU General Public License along with Bui
 // Extension configuration.
 export interface Settings {
 	// Command to run the program/execute a test (called once for each input).
-	run?: string,
+	run?: string[],
 	// Command that builds the program (run once before `run` command).
 	// If not set, `run` command will be used without building.
-	build?: string,
+	build?: string[],
 	// Similar to `run`, but called when running in debug mode.
-	debug?: string,
+	debugRun?: string[],
 	// Similar to `build`, but called when running in debug mode.
-	debugBuild?: string,
+	debugBuild?: string[],
 	// Command to format the program. See `formatStdin` for API.
-	format?: string,
+	format?: string[],
 	// If unset or true, format command is given source code via stdin and
 	// program text is replaced with whatever `format` command returns.
 	// If false, format command should modify the file in place.

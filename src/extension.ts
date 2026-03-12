@@ -72,7 +72,7 @@ async function buildAndRun(mode: BRMode) {
 
 	const languageId = activeDocument.languageId;
 
-	const settings: Settings | undefined = currentSettings.get(languageId);
+	const settings: Settings | undefined = currentSettings.get(`languageConfigs.${languageId}`);
 
 	if (!settings) {
 		vscode.window.showErrorMessage(`Unknown language ${languageId}!`);
@@ -87,6 +87,10 @@ async function buildAndRun(mode: BRMode) {
 	let testsRun: BnRTestRun | null = null;
 	try {
 		const buildTemplate = mode === BRMode.Debug && settings.debugBuild ? settings.debugBuild : settings.build;
+		if (typeof buildTemplate === "string") {
+			vscode.window.showErrorMessage(`Please update build command to be an array of strings!`);
+			return;
+		}
 		const buildCommand = initCommandTemplate(buildTemplate, fileInfo);
 		if (buildCommand) {
 			await compileFile({ command: buildCommand, cwd: fileInfo.dir });
@@ -107,7 +111,11 @@ async function buildAndRun(mode: BRMode) {
 			testsRun = BnRTestController.get().startRun(activeDocument);
 		}
 
-		const runTemplate = mode === BRMode.Debug ? settings.debug : settings.run;
+		const runTemplate = mode === BRMode.Debug ? settings.debugRun : settings.run;
+		if (typeof runTemplate === "string") {
+			vscode.window.showErrorMessage(`Please update run command to be an array of strings!`);
+			return;
+		}
 		if (mode === BRMode.Debug && !runTemplate) {
 			vscode.window.showErrorMessage(`Debug command not found!`);
 			return;
@@ -123,6 +131,9 @@ async function buildAndRun(mode: BRMode) {
 	} catch (e) {
 		if (e instanceof BuildAndRunException) {
 			// ignored: compile or run failed
+		} else {
+			console.error(e);
+			vscode.window.showErrorMessage(`Internal build-and-run error!`);
 		}
 	}
 	if (testsRun) {
@@ -138,7 +149,7 @@ async function format() {
 	}
 	const activeDocument = activeTextEditor.document;
 	const languageId = activeDocument.languageId;
-	const settings = vscode.workspace.getConfiguration(SETTINGS_NAME, activeDocument.uri).get(languageId) as Settings;
+	const settings = vscode.workspace.getConfiguration(SETTINGS_NAME, activeDocument.uri).get(`languageConfigs.${languageId}`) as Settings;
 
 	if (!settings) {
 		vscode.window.showErrorMessage(`Unknown language ${languageId}!`);
@@ -152,6 +163,10 @@ async function format() {
 	} else {
 		fileInfo = await fileOrTempInfo(activeDocument, settings.ext);
 	}
+	if (typeof settings.format === "string") {
+		vscode.window.showErrorMessage(`Please update format command to be an array of strings!`);
+		return;
+	}
 	const formatCommand = initCommandTemplate(settings.format, fileInfo);
 	if (!formatCommand) {
 		vscode.window.showErrorMessage(`Format command not found!`);
@@ -159,7 +174,14 @@ async function format() {
 	}
 	const source = activeDocument.getText();
 
-	let formatted = await formatSource({ command: formatCommand }, useStdin, source);
+	let formatted: string;
+	try {
+		formatted = await formatSource({ command: formatCommand }, useStdin, source);
+	} catch (e) {
+		console.error(e);
+		vscode.window.showErrorMessage(`Formatting failed: ${e}`);
+		return;
+	}
 	if (useStdin || activeDocument.isUntitled) {
 		if (!useStdin) {
 			formatted = await promises.readFile(join(fileInfo.dir, fileInfo.base), 'utf8');

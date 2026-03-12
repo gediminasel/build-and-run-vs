@@ -14,31 +14,25 @@ import { OutputChecker } from './checker';
 import BufferedLimitedChannel from './bufferedLimitedChannel';
 import { Result } from './result';
 
-export function initCommandTemplate(command: string | undefined, fileInfo: ParsedPath | undefined) {
+export function initCommandTemplate(command: string[] | undefined, fileInfo: ParsedPath | undefined) : string[] | null {
 	if (!command || !fileInfo)
-		return command;
-	return command.split('${file_path}').join(fileInfo.dir)
-		.split('${file}').join(fileInfo.base)
-		.split('${file_base_name}').join(fileInfo.name)
-		.split('${workspace_path}').join(vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath || fileInfo.dir);
+		return null;
+	return command.map((arg) => arg.split('${file_path}').join(fileInfo.dir))
+		.map((arg) => arg.split('${file}').join(fileInfo.base))
+		.map((arg) => arg.split('${file_base_name}').join(fileInfo.name))
+		.map((arg) => arg.split('${workspace_path}').join(vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath || fileInfo.dir));
 }
 
 export interface CommandToSpawn {
-	command: string,
+	command: string[],
 	cwd?: string
 }
 
 export function spawnCommand(command: CommandToSpawn): ChildProcessWithoutNullStreams {
-	if (process.platform === 'win32') {
-		return spawn('cmd', ['/s', "/c", '"' + command.command + '"'], {
-			cwd: command.cwd,
-			windowsVerbatimArguments: true
-		});
-	} else {
-		return spawn('/bin/bash', ["-c", command.command], {
-			cwd: command.cwd
-		});
-	}
+	return spawn(command.command[0], command.command.slice(1), {
+		cwd: command.cwd,
+		windowsVerbatimArguments: true
+	});
 }
 
 export type RunningProcess = {
@@ -49,23 +43,28 @@ export type RunningProcess = {
 const running = new Map<string, RunningProcess>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type OnCloseListener = (exitCode: number | null, signal: any, wasKilled: boolean) => void;
+export type OnCloseListener = (exitCode: number | null, signal: any, error: string | null, wasKilled: boolean) => void;
 
 export function listenCommand(command: CommandToSpawn, onClose: OnCloseListener, input?: string): RunningProcess {
 	const child = spawnCommand(command);
 	const rid = random_id();
-	let closeCallback: OnCloseListener | null = (exitCode, signal) => {
+	let closeCallback: OnCloseListener | null = (exitCode, signal, error) => {
 		const p = running.get(rid);
 		running.delete(rid);
 		closeCallback = null;
-		onClose(exitCode, signal, p?.wasKilled || false);
+		onClose(exitCode, signal, error, p?.wasKilled || false);
 	};
 	const close = (code?: number | null, signal?: NodeJS.Signals) => {
 		if (code === undefined)
 			code = child.exitCode;
-		if (closeCallback) closeCallback(code, signal, false);
+		if (closeCallback) closeCallback(code, signal, null, false);
+	};
+	const error = (err: Error) => {
+		console.error("Error spawning command", err);
+		if (closeCallback) closeCallback(-1, null, "Failed to run command " + command.command.join(" ") + ": " + err.message, false);
 	};
 	child.on("close", close);
+	child.on("error", error);
 	const proc = { process: child, wasKilled: false };
 	running.set(rid, proc);
 	child.stdin.end(input);
@@ -78,6 +77,7 @@ export interface OutputProgressOptions {
 	reportMsg?: (time: number) => string,
 	successMsg?: (time: number) => string,
 	failureMsg?: (time: number, failure: string) => string,
+	errorMsg?: (error: string) => string,
 }
 
 function getOptionsWithDefaults(o?: OutputProgressOptions) {
@@ -88,6 +88,7 @@ function getOptionsWithDefaults(o?: OutputProgressOptions) {
 		reportMsg: o.reportMsg || (time => `${jobName} ${(time / 1000).toFixed(1)}s`),
 		successMsg: o.successMsg || (time => `\n[${jobName} finished in ${(time / 1000).toFixed(3)}s]\n`),
 		failureMsg: o.failureMsg || ((time, failure) => `\n[${jobName} failed in ${(time / 1000).toFixed(3)}s with code ${failure}]\n`),
+		errorMsg: o.errorMsg || ((failure) => `\n[${jobName} failed with error: ${failure}]\n`),
 	};
 }
 
@@ -124,7 +125,7 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 				}
 			}, 100);
 
-			const child = listenCommand(command, (code, signal) => {
+			const child = listenCommand(command, (code, signal, error) => {
 				const endTime = Date.now();
 				clearInterval(statusInt);
 
@@ -139,12 +140,15 @@ export function listenCommandWithOutputAndProgress(command: CommandToSpawn, opti
 					}
 				}
 				const duration = endTime - startTime;
-				if (code || signal) {
-					const exitCode = (code ? code : signal);
-					output.append(opt.failureMsg(duration , exitCode));
+				if (error) {
+					output.append(opt.errorMsg(error));
+					resolve(new Result(input ?? null, false, false, "", duration));
+				} else if (code || signal) {
+					const exitCode = (code || signal);
+					output.append(opt.failureMsg(duration, exitCode));
 					resolve(new Result(input ?? null, false, false, "", duration));
 				} else {
-					output.append(opt.successMsg(duration ));
+					output.append(opt.successMsg(duration));
 					resolve(new Result(input ?? null, true, outputChecker?.good ?? null, bufferedOutput.getTruncatedOutput(), duration));
 				}
 			}, input?.input);

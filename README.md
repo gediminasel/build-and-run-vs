@@ -1,5 +1,7 @@
 # Build and Run
 
+> Note: Version 3 changed configuration schema. Please upgrade your configs.
+
 Build programs automatically and run them with input from source code comments.
 
 - Different build and run commands for different languages.
@@ -33,17 +35,17 @@ Example configuration (don't just replace everything!, add this inside settings 
 
 ```json
 {
-    // There should already be some existing values, don't delete them, append this:
-    "buildAndRun": {
+    // There mgiht already be some existing values, don't delete them, append this:
+    "buildAndRun.languageConfigs": {
         "cpp": {
-            "build": "g++ -std=gnu++23 -Wall -Wextra -O2 \"${file}\" -o \"${file_base_name}.exe\"",
-            "debugBuild": "g++ -std=gnu++23 -Wall -Wextra -g -O0 \"${file}\" -o \"${file_base_name}.exe\"",
+            "build": ["g++", "-std=gnu++23", "-Wall", "-Wextra", "-O2", "${file}", "-o", "${file_base_name}.exe"],
+            "debugBuild": ["g++", "-std=gnu++23", "-Wall", "-Wextra", "-g", "-O0", "${file}", "-o", "${file_base_name}.exe"],
             "inputBegin": "/*input\n",
             "inputEnd": "*/",
             "outputBegin": "/*output\n",
             "outputEnd": "*/",
-            "run": "\"./${file_base_name}.exe\"",
-            "debug": "gdb -q -ex \"set print thread-events off\" -ex run -ex \"bt -entry-values compact -frame-arguments scalar -full\" \"${file_base_name}.exe\"",
+            "run": ["${file_path}/${file_base_name}.exe"],
+            "debug": ["gdb", "-q", "-ex", "set print thread-events off", "-ex", "run", "-ex", "bt -entry-values compact -frame-arguments scalar -full", "${file_base_name}.exe"],
             "ext": "cpp",
             "format": "astyle --indent=tab --mode=c --project=none"
         },
@@ -52,9 +54,9 @@ Example configuration (don't just replace everything!, add this inside settings 
             "inputEnd": "\"\"\"",
             "outputBegin": "\"\"\"output\n",
             "outputEnd": "\"\"\"",
-            "run": "python -Xutf8 -u \"${file}\"",
+            "run": ["python3", "-Xutf8", "-u", "${file}"],
             "ext": "py",
-            "format": "ruff check - --fix | ruff format --line-length 120 -"
+            "format": ["bash", "-c", "ruff check - --fix | ruff format --line-length 120 -"]
         }
     }
 }

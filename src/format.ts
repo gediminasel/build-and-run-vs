@@ -32,10 +32,12 @@ export function formatSource(command: CommandToSpawn, returnStdout: boolean, sou
 					// ignore
 				}
 			}, 100);
-			child = listenCommand(command, (code, signal) => {
+			child = listenCommand(command, (code, signal, error) => {
 				clearInterval(statusInt);
 
-				if (code || signal) {
+				if (error) {
+					reject(error + "\n" + program.join(''));
+				} else if (code || signal) {
 					reject("NON-ZERO-RETURN: " + (code || signal) + "\n" + program.join(''));
 				} else {
 					resolve(program.join(''));
