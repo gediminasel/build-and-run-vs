@@ -4,7 +4,7 @@ You should have received a copy of the GNU General Public License along with Bui
 */
 
 function endsWithWhitespace(str: string) {
-	return str[str.length - 1].match(/\s+/) === null;
+	return str[str.length - 1].match(/\s+/) !== null;
 }
 
 function tokenize(str: string): string[] {
@@ -34,11 +34,11 @@ export class OutputChecker {
 		for (let i = 0; i + 1 < actual.length; i++) {
 			if (this.expected[this.i] !== actual[i]){
 				this.good = false;
-				break;
+				return false;
 			}
 			this.i++;
 		}
-		if (!this.good || this.i >= this.expected.length) {
+		if (this.i >= this.expected.length) {
 			this.good = false;
 			return false;
 		}
