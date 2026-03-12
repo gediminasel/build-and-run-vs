@@ -75,7 +75,7 @@ async function buildAndRun(mode: BRMode) {
 	const settings: Settings | undefined = currentSettings.get(`languageConfigs.${languageId}`);
 
 	if (!settings) {
-		vscode.window.showErrorMessage(`Unknown language ${languageId}!`);
+		vscode.window.showErrorMessage(`No Build and Run config for ${languageId}! Maybe you need to migrate the config?`);
 		return;
 	}
 
@@ -152,7 +152,7 @@ async function format() {
 	const settings = vscode.workspace.getConfiguration(SETTINGS_NAME, activeDocument.uri).get(`languageConfigs.${languageId}`) as Settings;
 
 	if (!settings) {
-		vscode.window.showErrorMessage(`Unknown language ${languageId}!`);
+		vscode.window.showErrorMessage(`No Build and Run format config for ${languageId}! Maybe you need to migrate the config?`);
 		return;
 	}
 	const useStdin = settings.formatStdin !== false;
