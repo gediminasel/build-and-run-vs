@@ -2,7 +2,7 @@
 	"name": "build-and-run",
 	"displayName": "Build and Run",
 	"description": "Build and Run your code with ease. Pass input from source comments.",
-	"version": "3.0.0",
+	"version": "3.0.1",
 	"publisher": "glelesius",
 	"bugs": {
 		"url": "https://github.com/gediminasel/build-and-run-vs/issues",
@@ -14,7 +14,7 @@
 	},
 	"license": "GNU GENERAL PUBLIC LICENSE Version 3. See license in LICENSE.txt",
 	"engines": {
-		"vscode": "^1.90.0"
+		"vscode": "^1.110.0"
 	},
 	"categories": [
 		"Testing",
@@ -155,17 +155,18 @@
 		"vscode:prepublish": "npm run compile",
 		"package": "vsce package",
 		"publish": "vsce publish",
+		"lstree": "vsce ls --tree",
 		"compile": "tsc -p ./",
 		"lint": "eslint . --ext .ts,.tsx",
 		"watch": "tsc -watch -p ./"
 	},
 	"devDependencies": {
-		"@types/node": "^25.5.0",
-		"@types/vscode": "^1.90.0",
-		"@typescript-eslint/eslint-plugin": "^8.57.0",
-		"@typescript-eslint/parser": "^8.57.0",
-		"@vscode/vsce": "^3.7.1",
-		"eslint": "^10.0.3",
+		"@types/node": "^25.9.1",
+		"@types/vscode": "^1.110.0",
+		"@typescript-eslint/eslint-plugin": "^8.60.1",
+		"@typescript-eslint/parser": "^8.60.1",
+		"@vscode/vsce": "^3.9.1",
+		"eslint": "^10.4.1",
 		"path": "0.12.7",
 		"typescript": "^5.9.3"
 	},

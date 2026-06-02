@@ -4,9 +4,8 @@
 
 pkgs.mkShellNoCC {
   packages = with pkgs; [
-    nodejs_24
-    nodePackages.npm
-    nodePackages.typescript-language-server
+    nodejs_26
+    typescript-language-server
     typescript
   ];
 }
