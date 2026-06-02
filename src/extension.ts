@@ -87,10 +87,6 @@ async function buildAndRun(mode: BRMode) {
 	let testsRun: BnRTestRun | null = null;
 	try {
 		const buildTemplate = mode === BRMode.Debug && settings.debugBuild ? settings.debugBuild : settings.build;
-		if (typeof buildTemplate === "string") {
-			vscode.window.showErrorMessage(`Please update build command to be an array of strings!`);
-			return;
-		}
 		const buildCommand = initCommandTemplate(buildTemplate, fileInfo);
 		if (buildCommand) {
 			await compileFile({ command: buildCommand, cwd: fileInfo.dir });
@@ -112,10 +108,6 @@ async function buildAndRun(mode: BRMode) {
 		}
 
 		const runTemplate = mode === BRMode.Debug ? settings.debugRun : settings.run;
-		if (typeof runTemplate === "string") {
-			vscode.window.showErrorMessage(`Please update run command to be an array of strings!`);
-			return;
-		}
 		if (mode === BRMode.Debug && !runTemplate) {
 			vscode.window.showErrorMessage(`Debug command not found!`);
 			return;
@@ -162,10 +154,6 @@ async function format() {
 		fileInfo = parse(activeDocument.uri.fsPath);
 	} else {
 		fileInfo = await fileOrTempInfo(activeDocument, settings.ext);
-	}
-	if (typeof settings.format === "string") {
-		vscode.window.showErrorMessage(`Please update format command to be an array of strings!`);
-		return;
 	}
 	const formatCommand = initCommandTemplate(settings.format, fileInfo);
 	if (!formatCommand) {

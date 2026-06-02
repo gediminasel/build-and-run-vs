@@ -1,7 +1,5 @@
 # Build and Run
 
-> Note: Version 3 changed configuration schema. Please upgrade your configs.
-
 Build programs automatically and run them with input from source code comments.
 
 - Different build and run commands for different languages.
