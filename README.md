@@ -43,7 +43,7 @@ Example configuration (don't just replace everything!, add this inside settings 
             "outputBegin": "/*output\n",
             "outputEnd": "*/",
             "run": ["${file_path}/${file_base_name}.exe"],
-            "debug": ["gdb", "-q", "-ex", "set print thread-events off", "-ex", "run", "-ex", "bt -entry-values compact -frame-arguments scalar -full", "${file_base_name}.exe"],
+            "debugRun": ["gdb", "-q", "-ex", "set print thread-events off", "-ex", "run", "-ex", "bt -entry-values compact -frame-arguments scalar -full", "${file_base_name}.exe"],
             "ext": "cpp",
             "format": ["astyle", "--indent=tab", "--mode=c", "--project=none"]
         },

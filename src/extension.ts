@@ -109,7 +109,7 @@ async function buildAndRun(mode: BRMode) {
 
 		const runTemplate = mode === BRMode.Debug ? settings.debugRun : settings.run;
 		if (mode === BRMode.Debug && !runTemplate) {
-			vscode.window.showErrorMessage(`Debug command not found!`);
+			vscode.window.showErrorMessage(`Debug run command not found!`);
 			return;
 		}
 		const runCommand = initCommandTemplate(runTemplate, fileInfo);
